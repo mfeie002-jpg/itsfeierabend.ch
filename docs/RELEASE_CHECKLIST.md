@@ -1,5 +1,13 @@
 # Free Audit — Public Beta Release Checklist
 
+**10 September reconciliation:** read
+[`RELEASE_RECONCILIATION_2026-09-10.md`](RELEASE_RECONCILIATION_2026-09-10.md)
+before cutover. The live database already contains August role hardening but is
+missing the three July launch migrations. Add the final
+`20260910090000_reconcile_audit_admin_policy.sql` repair after those migrations
+so admin audit reads do not call the revoked `has_role` function. Do not replay
+historical table-creation migrations merely because their version IDs differ.
+
 ## Environment variables (all runtime secrets)
 
 | Name | Where | Purpose |

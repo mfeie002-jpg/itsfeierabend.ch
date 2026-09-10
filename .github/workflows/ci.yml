@@ -29,6 +29,8 @@ jobs:
         run: npm run lint
       - name: Typecheck
         run: npm run typecheck
+      - name: PostgreSQL migration and RLS regression
+        run: npm run test:database
       - name: Set up Deno
         uses: denoland/setup-deno@v2
         with:
