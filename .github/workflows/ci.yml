@@ -59,6 +59,8 @@ jobs:
           VITE_TURNSTILE_SITE_KEY: ${{ vars.VITE_TURNSTILE_SITE_KEY }}
           VITE_GA4_MEASUREMENT_ID: ${{ vars.VITE_GA4_MEASUREMENT_ID }}
         run: npm run build
+      - name: Verify build preserves reviewed source
+        run: git diff --exit-code
       - name: Upload production build
         uses: actions/upload-artifact@v4
         with:

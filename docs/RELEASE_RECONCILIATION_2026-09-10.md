@@ -56,6 +56,12 @@ release comparison, not a deployment action.
 explicitly. The previous command addressed a solution file with no source files
 and did not establish that the app source passed type checking.
 
+The Windows verification also found that the Vite MCP plugin rewrote the
+committed Edge Function into a short stub during a production build. MCP
+generation now runs only in the development server; build and preview preserve
+the reviewed backend source. CI asserts the build leaves tracked files unchanged
+and the release manifest identifies a clean checkout.
+
 Validation at authoring time:
 
 - ESLint: 0 errors, 16 existing warnings.

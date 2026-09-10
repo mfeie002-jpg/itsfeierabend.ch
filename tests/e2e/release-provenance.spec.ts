@@ -9,6 +9,7 @@ test('served release identifies the checkout and matches HTML and JavaScript byt
   expect(manifest.repository).toBe('mfeie002-jpg/itsfeierabend.ch');
   expect(manifest.commit).toBe(execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim());
   expect(typeof manifest.dirty).toBe('boolean');
+  if (process.env.CI) expect(manifest.dirty).toBe(false);
   expect(manifest.files['release.json']).toBeUndefined();
   for (const path of ['index.html', 'audit/index.html', 'en/audit/index.html',
     ...Object.keys(manifest.files).filter((path) => /^assets\/index-.*\.js$/.test(path))]) {
