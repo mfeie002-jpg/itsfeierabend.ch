@@ -11,8 +11,10 @@ test('served release identifies the checkout and matches HTML and JavaScript byt
   expect(typeof manifest.dirty).toBe('boolean');
   if (process.env.CI) expect(manifest.dirty).toBe(false);
   expect(manifest.files['release.json']).toBeUndefined();
+  const entryScripts = Object.keys(manifest.files).filter((path) => /^assets\/index-.*\.js$/.test(path));
+  expect(entryScripts.length, 'release must include entry JavaScript').toBeGreaterThan(0);
   for (const path of ['index.html', 'audit/index.html', 'en/audit/index.html',
-    ...Object.keys(manifest.files).filter((path) => /^assets\/index-.*\.js$/.test(path))]) {
+    ...entryScripts]) {
     expect(manifest.files[path], path).toMatch(/^[a-f0-9]{64}$/);
     const served = await request.get(`/${path}`);
     expect(served.status()).toBe(200);

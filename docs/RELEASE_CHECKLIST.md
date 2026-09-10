@@ -82,9 +82,13 @@ historical table-creation migrations merely because their version IDs differ.
    Swiss UID/register details, production processor inventory, transfer
    regions and retention schedule. Until then, imprint and privacy routes stay
    `noindex` and production launch is blocked.
-2. Apply `20260725050000_final_launch_lead_security.sql`, then
-   `20260725060000_atomic_audit_create.sql`, and finally
-   `20260725070000_legacy_scanner_cutover_claim.sql`.
+2. For the verified current live DB (August hardening already applied), apply
+   `20260725050000_final_launch_lead_security.sql`, then
+   `20260725060000_atomic_audit_create.sql`, then
+   `20260725070000_legacy_scanner_cutover_claim.sql`, and finally
+   `20260910090000_reconcile_audit_admin_policy.sql`. A fresh environment also
+   needs the earlier history including the imported August migration; test the
+   complete order rather than replaying already-applied table creation.
 3. Configure Turnstile, Resend, the approved frontend GA4 ID and all required
    Edge Function secrets.
 4. If Edge Functions must be deployed before the frontend, set
@@ -97,7 +101,7 @@ historical table-creation migrations merely because their version IDs differ.
    `free_audit` lead created in the previous 15 minutes, reuses an existing
    report for the same lead, and atomically reserves the report together with
    one scan per IP plus ten scans globally per hour during the cutover.
-5. Deploy Edge Functions only after all three migrations succeed. Confirm the
+5. Deploy Edge Functions only after all four pending migrations succeed. Confirm the
    existing frontend can still submit `free_audit`/`free_call`, receives its
    legacy `lead_id`, starts the scanner and opens the legacy result.
 6. Publish the app with a documented rollback version.
