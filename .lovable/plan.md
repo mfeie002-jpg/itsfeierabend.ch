@@ -1,88 +1,40 @@
-## Status Masterplan
+# Release Reconciliation — Read-Only Findings (RC PR #2)
 
-Der 5-Sprint-Plan für `itsfeierabend.ch` ist **abgeschlossen**. Die Seite ist live unter `https://itsfeierabend.ch` und `https://itsfeierabend.lovable.app`.
+No code, database, deployment, secret or permission changes were made. Everything below is observation plus recommendation, clearly separated.
 
-**Abgeschlossene Sprints:**
-- Sprint 1–2: IA, 5 SEO-Landings, Hybrid-Pricing
-- Sprint 3: Audit-Produkt-Härtung, neue Hero-Positionierung, Navigation
-- Sprint 4: Tracking/CRM, Lead-Datenmodell, Rechtstexte (Rahmen)
-- Sprint 5: Mobile QA, Performance, Security-Scan, Publish
+## Headline
 
-**Noch offene Pflichtpunkte vor 100% Launch-Sauberkeit:**
-1. Impressum: Rechtsform, Sitz, verantwortliche Person (ggf. UID) fehlen.
-2. Cloudflare Turnstile: `itsfeierabend.ch` + `www.itsfeierabend.ch` als erlaubte Hostnames eintragen.
-3. Supabase Auth: Leaked-Password-Protection aktivieren.
+The hosted database is currently **paused**, not reactivated. No production migration state could be read, so questions (1) and (2) cannot be answered factually right now. The code-side questions (3) are answered.
 
----
+## Production facts (observed)
 
-## Vorschlag: Nächste Phase
+- Backend lifecycle state: **paused / INACTIVE**. Two read attempts against `supabase_migrations.schema_migrations`, one minute apart, both failed: connection pooler unavailable.
+- Consequence: applied migration versions, July-launch migration presence, and the `20260910090000` reconciliation migration status are **unknown/unverified** at this moment. Any claim that they are applied or missing would be unsupported.
 
-Ich schlage vor, wir machen **zwei Dinge parallel**:
+## Repository facts (observed)
 
-### A. Offene Launch-Punkte finalisieren (blockierend für sauberen Betrieb)
+- Current working commit: `6de3fec` ("Work in progress"), clean tree, no uncommitted changes.
+- `origin/main`: `7f15b77` ("Fixed failing SEO findings"). Local is **1 commit ahead**, 0 behind.
+- The commits named in the request are **not present in this repository**: reviewed PR head `4481f1f5…` and GitHub main `1ad59bdd…` both fail object lookup. Either they live in a fork/PR branch that was never fetched here, or the hashes belong to a different repository.
+- Migration files on disk (12 total). July launch set present as files: `20260724193340` (creates `audit_requests`), `20260724193942` (Semrush enrichment columns), `20260724194423` (extends `audit_events` type check). Latest file: `20260821200430`.
+- **No `20260910090000` reconciliation migration exists anywhere in the project** — no file, no reference in any source file.
 
-1. **Impressum + Datenschutz vervollständigen**
-   - Du lieferst: Rechtsform, Sitz, verantwortliche Person, UID (falls vorhanden).
-   - Ich trage die Werte in `src/pages/ImprintPage.tsx` und `src/pages/PrivacyPage.tsx` ein (DE + EN).
-   - Datenschutz: Auftragsverarbeiter-Liste prüfen (Supabase, Lovable Cloud, Semrush, Turnstile) und aktualisieren.
+## Interpretation
 
-2. **Turnstile Produktionssicherheit**
-   - Cloudflare Turnstile Widget: Hostnames `itsfeierabend.ch` und `www.itsfeierabend.ch` zur Allowlist hinzufügen.
-   - `src/components/Turnstile.tsx` hat bereits eine `String(SITE_KEY)`-Härtung.
+- The "missing July migrations" question is about the *database*, and the files exist locally; whether they were ever applied to production is exactly what cannot be checked while the database is paused.
+- The referenced reconciliation migration does not exist in this codebase. Either it was never merged here, or it lives only on the unfetched PR branch.
 
-3. **Auth-Härtung**
-   - In den Backend-Auth-Settings "Leaked Password Protection" aktivieren.
-   - Optional: Supabase Linter nochmals laufen lassen und bestätigen, dass keine kritischen Findings zurückbleiben.
+## Recommended cutover sequence (not executed)
 
-### B. Post-Launch-Wachstum (nächste 30–60 Tage)
+1. Resume the hosted database from Cloud settings; wait for healthy state.
+2. Read applied versions from the migration ledger and diff against the 12 files on disk.
+3. Verify the July objects actually exist (`audit_requests` columns incl. `semrush_data`, `audit_events` check constraint, grants and row-level rules on both).
+4. Only then decide whether a reconciliation migration is needed, and author it against real observed state rather than the assumed `20260910090000`.
+5. Apply during a low-traffic window, re-run the linter and security scan, then publish.
 
-1. **Content-Sprint: 4–6 SEO-Artikel**
-   - Ziel: organische Sichtbarkeit für Schweizer KMU-Themen rund um AI, Website-Audit, SEO.
-   - Format: 1.500–2.000 Wörter, FAQ-Block, interne Verlinkung zu `/audit`.
+## Blockers requiring Founder approval
 
-2. **Fallstudien-Seite(n)**
-   - Eine Case-Study pro Service (Website-Audit, SEO, AI-Visibility).
-   - Nur mit belegbaren Daten; keine erfundenen Kennzahlen.
-
-3. **Lead-Nurture-Sequenz**
-   - 3 E-Mails nach Audit-Submission: Report erklären → nächster Schritt → Beratungsangebot.
-   - Edge Function `send-report-email` existiert bereits.
-
-4. **Conversion-Optimierung**
-   - A/B-Test Hero-CTA-Texte (`Kostenlosen Audit starten` vs. `Website in 60 Sek. analysieren`).
-   - Exit-Intent für `/audit` und `/pricing` prüfen.
-
-5. **Analytics-Review**
-   - 2 Wochen nach Launch: GA4-Events auf `audit_start`, `audit_submit`, `lead_form_success`, `pricing_cta_click` prüfen.
-   - UTM-Persistenz über Seitenaufrufe validieren.
-
----
-
-## Technische Details
-
-**Dateien, die bei Impressum-Update betroffen sind:**
-- `src/pages/ImprintPage.tsx`
-- `src/pages/PrivacyPage.tsx`
-- ggf. `public/sitemap.xml` (keine Änderung nötig, da rechtliche Seiten bereits drin)
-
-**Externe Settings (nicht im Code):**
-- Cloudflare Turnstile Dashboard → Site Settings → Allowed hostnames
-- Lovable Cloud / Supabase Auth → Security → Leaked Password Protection
-
-**Empfohlene Reihenfolge:**
-1. Du lieferst Impressum-Fakten.
-2. Ich aktualisiere Impressum + Datenschutz.
-3. Du setzt Turnstile-Hostnames und Auth-Härtung.
-4. Wir laufen einen finalen Smoke-Test gegen Produktion.
-5. Dann starten wir Post-Launch-Wachstum mit Content-Sprint.
-
----
-
-## Was ich von dir brauche
-
-- Impressum-Fakten (Rechtsform, Sitz, verantwortliche Person, UID).
-- Go für Turnstile-Hostname-Update (ich kann das nicht in Cloudflare setzen).
-- Go für Leaked-Password-Protection (Backend-Setting).
-- Priorität für Post-Launch-Welle: Content, Fallstudien, oder Lead-Nurture zuerst?
-
-Sobald du die Fakten lieferst, implementiere ich Impressum + Datenschutz in einem Zug.
+- **Resuming the paused database** — required before any of this can be verified; it is a state change, so it is not something to do under a read-only mandate.
+- **Access to the PR branch / correct repository** for `4481f1f5…` and `1ad59bdd…`; without it, drift against the reviewed head cannot be measured.
+- **Clarification of `20260910090000`** — confirm whether it exists elsewhere or was planned but never written.
+- Local `6de3fec` is ahead of `origin/main`; confirm whether that commit is intended to ship.
