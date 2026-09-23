@@ -71,7 +71,7 @@ serve(async (req) => {
       .update({ viewed_at: new Date().toISOString() })
       .eq('token', token);
 
-    console.log('Report found:', report.site_name);
+    console.log('Analysis report found');
 
     return new Response(
       JSON.stringify({ report }),
