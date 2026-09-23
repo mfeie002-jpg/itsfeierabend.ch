@@ -82,22 +82,11 @@ serve(async (req) => {
       return json({ error: msgs[norm.error] ?? "Ungültige URL", code: `url_${norm.error}` }, 400);
     }
 
-    // 4) Rate limits + per-domain cooldown
-    const limit = await checkLimits(supabase, { ipHash, normalizedDomain: norm.domain });
+    // 4) Cheap rate-limit preflight. The authoritative quota and domain
+    // cooldown checks run again under the RPC transaction lock below.
+    const limit = await checkLimits(supabase, { ipHash });
     if (!limit.ok) {
-      await logEvent(
-        limit.reason === "domain_recently_audited" ? "domain_throttled" : "rate_limited",
-        { reason: limit.reason, domain: norm.domain },
-      );
-      if (limit.reason === "domain_recently_audited" && limit.existingToken) {
-        // Return the existing report link so the user still gets a result.
-        return json({
-          success: true,
-          reused: true,
-          token: limit.existingToken,
-          redirect_path: lang === "en" ? `/en/audit/r/${limit.existingToken}` : `/audit/r/${limit.existingToken}`,
-        }, 200);
-      }
+      await logEvent("rate_limited", { reason: limit.reason, domain: norm.domain });
       const msg = limit.reason === "per_ip_daily_exceeded"
         ? "Tageslimit für diese IP erreicht. Bitte morgen erneut versuchen."
         : "Wir sind heute stark ausgelastet — bitte morgen erneut versuchen.";
@@ -148,6 +137,7 @@ serve(async (req) => {
         p_consent_version: CURRENT_CONSENT_VERSION,
         p_ip_hash: ipHash,
         p_user_agent: userAgent,
+        p_domain_cooldown_days: LIMITS.domainCooldownDays,
         p_per_ip_limit: LIMITS.perIpDaily,
         p_global_limit: LIMITS.globalDaily,
       },
@@ -155,6 +145,19 @@ serve(async (req) => {
 
     const creation = Array.isArray(creationRows) ? creationRows[0] : null;
     if (creation?.limit_reason) {
+      const domainCooldown = creation.limit_reason === "domain_recently_audited";
+      await logEvent(domainCooldown ? "domain_throttled" : "rate_limited", {
+        reason: creation.limit_reason,
+        domain: norm.domain,
+      });
+      if (domainCooldown) {
+        return json({
+          error: lang === "en"
+            ? "A recent private report already exists for this domain. Please use the link sent to its requester."
+            : "Für diese Domain existiert bereits ein privater Report. Bitte nutze den Link aus der ursprünglichen E-Mail.",
+          code: creation.limit_reason,
+        }, 409);
+      }
       const msg = creation.limit_reason === "per_ip_daily_exceeded"
         ? "Tageslimit für diese IP erreicht. Bitte morgen erneut versuchen."
         : "Wir sind heute stark ausgelastet — bitte morgen erneut versuchen.";

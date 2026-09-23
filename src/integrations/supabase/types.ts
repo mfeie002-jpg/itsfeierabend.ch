@@ -763,6 +763,7 @@ export type Database = {
           p_consent_at: string | null
           p_consent_marketing: boolean | null
           p_consent_version: string | null
+          p_domain_cooldown_days: number
           p_email: string
           p_first_name: string
           p_gclid: string | null

@@ -11,8 +11,14 @@ test('create-audit preserves the current form contract and uses the atomic RPC',
   assert.match(source, /p_industry:\s*text\(body\.industry, 120\) \?\? ["']analysis_request["']/);
   assert.match(source, /p_audit_type:\s*text\(body\.audit_type, 80\) \?\? ["']business["']/);
   assert.match(source, /p_consent_version:\s*CURRENT_CONSENT_VERSION/);
+  assert.match(source, /p_domain_cooldown_days:\s*LIMITS\.domainCooldownDays/);
+  assert.match(source, /domain_recently_audited/);
   assert.doesNotMatch(source, /\.from\(["']audit_requests["']\)\s*\.insert\(/);
   assert.doesNotMatch(source, /recordLimitHits\(/);
+
+  const limits = await read('supabase/functions/_shared/audit-limits.ts');
+  assert.doesNotMatch(limits, /select\(["']id, token, status["']\)/);
+  assert.doesNotMatch(limits, /existingToken/);
 });
 
 test('business-scanner gates the public compatibility path and claims scans atomically', async () => {

@@ -32,6 +32,7 @@ CREATE OR REPLACE FUNCTION public.create_audit_with_lead(
   p_consent_version text,
   p_ip_hash text,
   p_user_agent text,
+  p_domain_cooldown_days integer,
   p_per_ip_limit integer,
   p_global_limit integer
 )
@@ -81,6 +82,24 @@ BEGIN
         SELECT NULL::uuid, NULL::uuid, NULL::uuid, false, 'per_ip_daily_exceeded'::text;
       RETURN;
     END IF;
+  END IF;
+
+  -- A report token is a private bearer credential. Enforce the per-domain
+  -- cooldown while holding the same transaction lock as quota reservation,
+  -- but never return an earlier visitor's token to a later requester.
+  IF EXISTS (
+    SELECT 1
+      FROM public.audit_requests
+     WHERE normalized_domain = p_normalized_domain
+       AND created_at >= now() - make_interval(
+         days => greatest(coalesce(p_domain_cooldown_days, 1), 1)
+       )
+       AND status IN ('pending', 'fetching', 'scoring', 'ready', 'partial')
+  ) THEN
+    RETURN QUERY
+      SELECT NULL::uuid, NULL::uuid, NULL::uuid, false,
+        'domain_recently_audited'::text;
+    RETURN;
   END IF;
 
   SELECT leads.id
@@ -267,13 +286,13 @@ $$;
 REVOKE ALL ON FUNCTION public.create_audit_with_lead(
   text, text, text, text, text, text, text, text, text, text, text,
   text[], text, text, text, text, text, text, text, text, text, text,
-  boolean, timestamptz, text, text, text, integer, integer
+  boolean, timestamptz, text, text, text, integer, integer, integer
 ) FROM PUBLIC, anon, authenticated;
 
 GRANT EXECUTE ON FUNCTION public.create_audit_with_lead(
   text, text, text, text, text, text, text, text, text, text, text,
   text[], text, text, text, text, text, text, text, text, text, text,
-  boolean, timestamptz, text, text, text, integer, integer
+  boolean, timestamptz, text, text, text, integer, integer, integer
 ) TO service_role;
 
 -- Atomically validate and reserve the temporary legacy scanner path. The

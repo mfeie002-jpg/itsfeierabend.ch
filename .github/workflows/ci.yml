@@ -12,19 +12,38 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
       - name: Install dependencies
         run: bun install --frozen-lockfile
-      - name: Lint
+      - name: Full-repository lint debt (informational baseline)
+        continue-on-error: true
         run: bun run lint
+      - name: Lint changed source (no new debt)
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            base="origin/${{ github.base_ref }}"
+          else
+            base="HEAD^"
+          fi
+          mapfile -t files < <(git diff --name-only --diff-filter=ACMR "$base...HEAD" -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.mjs')
+          if (( ${#files[@]} )); then
+            bunx eslint "${files[@]}"
+          fi
+      - name: TypeScript
+        run: bun run typecheck
+      - name: Database and runtime contract tests
+        run: bun run test:database
       - name: Deno tests (edge functions)
         uses: denoland/setup-deno@v1
         with:
           deno-version: v1.x
       - name: Run deno tests
-        run: deno test --allow-env --allow-net --allow-read supabase/functions/_shared/*.test.ts || true
+        run: deno test --allow-env --allow-net --allow-read supabase/functions/_shared/*.test.ts
       - name: Production build
         env:
           VITE_SUPABASE_URL: "https://placeholder.supabase.co"

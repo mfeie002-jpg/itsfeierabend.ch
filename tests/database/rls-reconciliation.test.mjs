@@ -56,6 +56,45 @@ test(`reconciled ${history} history preserves admin-only data access and closes 
     try { return await db.query(sql); }
     finally { await db.exec('RESET ROLE'); }
   }
+  await t.test('atomic audit cooldown never returns another requester’s token', async () => {
+    const first = await asUser('service_role', '', `
+      SELECT * FROM public.create_audit_with_lead(
+        'https://fresh.example', 'fresh.example', 'First', 'Requester',
+        'first@example.invalid', 'de', NULL, 'analysis_request', NULL, NULL,
+        NULL, '{}'::text[], NULL, 'website', NULL, NULL, NULL, NULL, NULL,
+        NULL, NULL, NULL, false, now(), 'test-v1', 'ip-first', 'test-agent',
+        30, 5, 200
+      )
+    `);
+    assert.equal(first.rows.length, 1);
+    assert.match(first.rows[0].audit_token, /^[0-9a-f-]{36}$/i);
+    assert.equal(first.rows[0].limit_reason, null);
+
+    const second = await asUser('service_role', '', `
+      SELECT * FROM public.create_audit_with_lead(
+        'https://fresh.example', 'fresh.example', 'Second', 'Requester',
+        'second@example.invalid', 'de', NULL, 'analysis_request', NULL, NULL,
+        NULL, '{}'::text[], NULL, 'website', NULL, NULL, NULL, NULL, NULL,
+        NULL, NULL, NULL, false, now(), 'test-v1', 'ip-second', 'test-agent',
+        30, 5, 200
+      )
+    `);
+    assert.equal(second.rows.length, 1);
+    assert.equal(second.rows[0].audit_id, null);
+    assert.equal(second.rows[0].audit_token, null);
+    assert.equal(second.rows[0].lead_id, null);
+    assert.equal(second.rows[0].limit_reason, 'domain_recently_audited');
+
+    const stored = await db.query(`
+      SELECT first_name, email, token
+        FROM public.audit_requests
+       WHERE normalized_domain = 'fresh.example'
+    `);
+    assert.equal(stored.rows.length, 1);
+    assert.equal(stored.rows[0].first_name, 'First');
+    assert.equal(stored.rows[0].email, 'first@example.invalid');
+    assert.equal(stored.rows[0].token, first.rows[0].audit_token);
+  });
   await t.test('reproduces the cross-branch regression before applying the repair', async () => {
     await assert.rejects(
       asUser('authenticated', admin, 'SELECT id FROM public.audit_requests'),
@@ -66,9 +105,10 @@ test(`reconciled ${history} history preserves admin-only data access and closes 
   await db.exec(repair);
   await t.test('repair is safe to replay', async () => { await db.exec(repair); });
   await t.test('admin reads leads, legacy reports and new audit requests', async () => {
+    const expectedRows = { leads: 2, analysis_reports: 1, audit_requests: 2 };
     for (const table of ['leads', 'analysis_reports', 'audit_requests']) {
       const result = await asUser('authenticated', admin, `SELECT id FROM public.${table}`);
-      assert.equal(result.rows.length, 1, table);
+      assert.equal(result.rows.length, expectedRows[table], table);
     }
   });
   await t.test('non-admin cannot read another user’s records', async () => {

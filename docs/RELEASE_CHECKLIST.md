@@ -35,7 +35,7 @@
 | Bot check fails | Return HTTP 400, log `audit_events.bot_check_failed`, no DB insert. |
 | Malformed / private / IP-literal / non-http URL | Return HTTP 400, log `audit_events.url_rejected`, no DB insert. |
 | Per-IP / global limit exceeded | Return HTTP 429, log `audit_events.rate_limited`. |
-| Domain within 30-day cooldown | Return HTTP 200 with the existing token so the user still gets a report. Logged as `audit_events.domain_throttled`. |
+| Domain within 30-day cooldown | Return HTTP 409 without exposing the earlier private report token. Ask the requester to use the original emailed link. Logged as `audit_events.domain_throttled`. |
 | SSRF-blocked (private IP, DNS loop, redirect loop) | `fetch-site-signals` returns `{ ctx: null, error, partial: true }`; scoring proceeds with `partial` status. |
 | Semrush timeout / quota exceeded / auth error | Enrichment marked `unavailable`; audit still completes with deterministic score. |
 | Report generation crash | Row stays in `failed`; user is shown a retry-able state on the report page. |
