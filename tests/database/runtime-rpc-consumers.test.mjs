@@ -21,6 +21,19 @@ test('create-audit preserves the current form contract and uses the atomic RPC',
   assert.doesNotMatch(limits, /existingToken/);
 });
 
+test('submit-lead uses the dual public contract without exposing current row ids', async () => {
+  const source = await read('supabase/functions/submit-lead/index.ts');
+
+  assert.match(source, /validateAndSanitizeLead\(body\)/);
+  assert.match(source, /leadSuccessPayload\(leadInput\.contract, insertedLead\.id\)/);
+  assert.match(source, /RATE_LIMIT_SCOPE = ["']lead_form["']/);
+  assert.match(source, /client_ip_unavailable/);
+  assert.match(source, /public_token:\s*null/);
+  assert.doesNotMatch(source, /generateToken\(/);
+  assert.doesNotMatch(source, /response\.reportUrl/);
+  assert.doesNotMatch(source, /lead\.name.*lead\.email/);
+});
+
 test('business-scanner gates the public compatibility path and claims scans atomically', async () => {
   const source = await read('supabase/functions/business-scanner/index.ts');
 
