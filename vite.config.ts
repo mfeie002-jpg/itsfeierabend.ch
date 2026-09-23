@@ -13,7 +13,10 @@ export default defineConfig(({ command, mode }) => ({
   plugins: [
     react(),
     mode === "development" && componentTagger(),
-    // The MCP generator is a development-only source generator. Running it`n    // during a production build rewrites the reviewed Edge Function with the`n    // build-time project ID and makes the build mutate tracked source.`n    command === "serve" && mode === "development" && mcpPlugin(),
+    // The MCP generator is a development-only source generator. Running it
+    // during a production build rewrites the reviewed Edge Function with the
+    // build-time project ID and makes the build mutate tracked source.
+    command === "serve" && mode === "development" && mcpPlugin(),
   ].filter(Boolean),
   resolve: {
     alias: {

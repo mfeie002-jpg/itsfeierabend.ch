@@ -45,7 +45,7 @@ jobs:
       - name: Run deno tests
         run: deno test --allow-env --allow-net --allow-read supabase/functions/_shared/*.test.ts
       - name: Check edge function entrypoints
-        run: deno check supabase/functions/submit-lead/index.ts supabase/functions/create-audit/index.ts supabase/functions/business-scanner/index.ts
+        run: deno check supabase/functions/submit-lead/index.ts supabase/functions/create-audit/index.ts supabase/functions/business-scanner/index.ts supabase/functions/get-analysis-report/index.ts
       - name: Production build
         env:
           VITE_SUPABASE_URL: "https://placeholder.supabase.co"

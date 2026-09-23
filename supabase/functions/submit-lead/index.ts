@@ -252,17 +252,17 @@ async function handleRequest(req: Request): Promise<Response> {
   }
 
   const supabase = createClient(supabaseUrl, serviceRoleKey);
-  const rateLimitSince = new Date(Date.now() - RATE_LIMIT_WINDOW_MS)
-    .toISOString();
-  const { count: recentSubmissions, error: rateLimitReadError } = await supabase
-    .from("rate_limits")
-    .select("id", { count: "exact", head: true })
-    .eq("scope", RATE_LIMIT_SCOPE)
-    .eq("ip_hash", ipHash)
-    .gte("created_at", rateLimitSince);
+  const { data: rateLimitReserved, error: rateLimitError } = await supabase.rpc(
+    "reserve_lead_submission",
+    {
+      p_ip_hash: ipHash,
+      p_limit: RATE_LIMIT_MAX,
+      p_window_seconds: RATE_LIMIT_WINDOW_MS / 1_000,
+    },
+  );
 
-  if (rateLimitReadError) {
-    console.error("submit-lead rate-limit check failed");
+  if (rateLimitError) {
+    console.error("submit-lead atomic rate-limit reservation failed");
     return json(
       {
         error: "Service temporarily unavailable.",
@@ -271,7 +271,7 @@ async function handleRequest(req: Request): Promise<Response> {
       503,
     );
   }
-  if ((recentSubmissions ?? 0) >= RATE_LIMIT_MAX) {
+  if (rateLimitReserved !== true) {
     return json(
       {
         error: leadInput.language === "de"
@@ -281,20 +281,6 @@ async function handleRequest(req: Request): Promise<Response> {
       },
       429,
       { "Retry-After": String(RATE_LIMIT_WINDOW_MS / 1_000) },
-    );
-  }
-
-  const { error: rateLimitWriteError } = await supabase
-    .from("rate_limits")
-    .insert({ ip_hash: ipHash, scope: RATE_LIMIT_SCOPE });
-  if (rateLimitWriteError) {
-    console.error("submit-lead rate-limit record failed");
-    return json(
-      {
-        error: "Service temporarily unavailable.",
-        code: "rate_limit_unavailable",
-      },
-      503,
     );
   }
 

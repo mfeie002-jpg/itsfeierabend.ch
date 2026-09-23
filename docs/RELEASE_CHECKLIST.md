@@ -9,6 +9,7 @@
 | `SUPABASE_ANON_KEY` | Edge Functions | Exact public bearer accepted by the legacy scanner only during the bounded cutover window |
 | `SUPABASE_PUBLISHABLE_KEY` | Edge Functions | Alternate public key accepted by the transitional scanner guard |
 | `LEGACY_PUBLIC_SCANNER_ENABLED` | Edge Functions | Set to `true` only for the bounded cutover window while `AnalysisRequestForm` still calls `business-scanner` from the browser; default/absent is fail-closed |
+| `IP_HASH_SALT` | Edge Functions | Secret random value of at least 32 characters; required for keyed, rotatable IP pseudonyms |
 | `LOVABLE_API_KEY` | Edge Functions | Semrush gateway auth |
 | `SEMRUSH_API_KEY` | Edge Functions | Semrush connection key (managed by connector) |
 | `TURNSTILE_SECRET_KEY` | Edge Functions | Cloudflare Turnstile server-side verify. **Required for beta** — when unset, bot check fails open. |
@@ -67,21 +68,31 @@
 
 ## Launch order
 
-1. Apply only `20260725050000` → `20260725060000` → `20260725070000` →
-   `20260910090000`, then verify the ledger, RPC signatures and RLS grants
-   before deploying either RPC consumer.
-2. Configure `TURNSTILE_SECRET_KEY`, the public Supabase key available to the
-   Edge runtime, `LEGACY_PUBLIC_SCANNER_ENABLED=true` for the compatibility
-   window, and `VITE_TURNSTILE_SITE_KEY` for the build.
-3. Deploy the Edge Functions and app from one exact reviewed source SHA.
-4. Run the manual test cases against the production URL, including a bounded
+1. Link the Supabase CLI to the verified production project and run
+   `supabase migration list --linked`. Confirm the remote ledger still ends at
+   `20260821200430` and none of the five versions below is already present.
+2. Because the three July migrations predate the current remote ledger, preview
+   the exact backfill with `supabase db push --linked --include-all --dry-run`.
+   The preview must contain only `20260725050000`, `20260725060000`,
+   `20260725070000`, `20260910090000`, and `20260923070000`. Any other version
+   is a hard stop.
+3. Under the exact Human Gate, run
+   `supabase db push --linked --include-all` once. Immediately re-read
+   `supabase_migrations.schema_migrations`, both RPC signatures and the RLS
+   grants. Do not deploy a function if any expected version or RPC is absent.
+4. Configure `TURNSTILE_SECRET_KEY`, a random `IP_HASH_SALT` of at least 32
+   characters, the public Supabase key available to the Edge runtime,
+   `LEGACY_PUBLIC_SCANNER_ENABLED=true` for the compatibility window, and
+   `VITE_TURNSTILE_SITE_KEY` for the build.
+5. Deploy the Edge Functions and app from one exact reviewed source SHA.
+6. Run the manual test cases against the production URL, including a bounded
    browser-origin scanner request that proves the RPC guard path.
-5. After the legacy browser caller is removed, unset or set
+7. After the legacy browser caller is removed, unset or set
    `LEGACY_PUBLIC_SCANNER_ENABLED=false`, change `verify_jwt` back to `true` for
    `business-scanner`, `scan-status` and `get-analysis-report`, redeploy those
    three functions, and verify an anonymous request returns HTTP 401 while the
    service-role path remains accepted.
-6. Remove the `legacy_v0` request/response branches only after the rollback
+8. Remove the `legacy_v0` request/response branches only after the rollback
    window for the old frontend has closed.
-7. Enable analytics dashboards / alerting on `audit_events.rate_limited` and
+9. Enable analytics dashboards / alerting on `audit_events.rate_limited` and
    `audit_events.bot_check_failed`.

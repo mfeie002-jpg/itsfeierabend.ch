@@ -796,6 +796,14 @@ export type Database = {
           limit_reason: string | null
         }[]
       }
+      reserve_lead_submission: {
+        Args: {
+          p_ip_hash: string
+          p_limit: number
+          p_window_seconds: number
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

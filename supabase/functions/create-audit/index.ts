@@ -23,6 +23,14 @@ serve(async (req) => {
   const ipHash = await hashIp(ip);
   const userAgent = req.headers.get("user-agent") ?? null;
 
+  if (!ipHash) {
+    console.error("create-audit IP hashing is unavailable");
+    return json({
+      error: "Service temporarily unavailable.",
+      code: "ip_hash_unavailable",
+    }, 503);
+  }
+
   const logEvent = (event_type: string, metadata: Record<string, unknown>) =>
     supabase.from("audit_events").insert({
       audit_id: null,

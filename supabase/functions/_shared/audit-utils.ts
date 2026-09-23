@@ -96,8 +96,12 @@ export function normalizeDomain(
 export async function resolvePublicIps(host: string): Promise<
   { ok: true; ips: string[] } | { ok: false; reason: string }
 > {
-  // deno-lint-ignore no-explicit-any
-  const dns = (Deno as any).resolveDns;
+  const dns = (Deno as unknown as {
+    resolveDns?: (
+      hostname: string,
+      recordType: "A" | "AAAA",
+    ) => Promise<string[]>;
+  }).resolveDns;
   if (typeof dns !== "function") {
     // Fallback: allow only if not an IP literal; the caller already blocked those.
     return { ok: true, ips: [] };
@@ -160,14 +164,33 @@ export function isValidEmail(email: string): boolean {
   return /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(email.trim()) && email.length < 255;
 }
 
-export async function hashIp(ip: string | null): Promise<string | null> {
-  if (!ip) return null;
-  const data = new TextEncoder().encode(ip + "|itsfeierabend-audit-v0");
-  const digest = await crypto.subtle.digest("SHA-256", data);
+export async function hashIpWithSalt(
+  ip: string,
+  salt: string,
+): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(salt),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const digest = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    encoder.encode(`ip-hash-v1:${ip}`),
+  );
   return Array.from(new Uint8Array(digest))
     .map((b) => b.toString(16).padStart(2, "0"))
-    .join("")
-    .slice(0, 32);
+    .join("");
+}
+
+export async function hashIp(ip: string | null): Promise<string | null> {
+  if (!ip) return null;
+  const salt = Deno.env.get("IP_HASH_SALT");
+  if (!salt || salt.length < 32) return null;
+  return hashIpWithSalt(ip, salt);
 }
 
 export function clientIp(req: Request): string | null {
