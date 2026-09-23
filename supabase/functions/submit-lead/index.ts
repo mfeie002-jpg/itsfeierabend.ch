@@ -1,470 +1,433 @@
+// deno-lint-ignore-file no-import-prefix
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.2";
+import {
+  clientIp,
+  corsHeaders as sharedCorsHeaders,
+  hashIp,
+} from "../_shared/audit-utils.ts";
+import {
+  contractText,
+  leadSuccessPayload,
+  type PublicLeadType,
+  validateAndSanitizeLead,
+} from "../_shared/public-contracts.ts";
+
+declare const EdgeRuntime:
+  | { waitUntil: (promise: Promise<unknown>) => void }
+  | undefined;
+
+const MAX_BODY_BYTES = 30_000;
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const RATE_LIMIT_MAX = 3;
+const DUPLICATE_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+const RATE_LIMIT_SCOPE = "lead_form";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  ...sharedCorsHeaders,
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Max-Age": "86400",
 };
 
-interface LeadSubmission {
-  language: "de" | "en";
-  lead_type: "free_audit" | "free_call";
-  industry: string;
-  service_area: string;
-  website_url?: string;
-  budget_range?: string;
-  capacity_range?: string;
-  name: string;
-  email: string;
-  phone?: string;
-  message?: string;
-  preferred_times?: string;
-  utm_source?: string;
-  utm_medium?: string;
-  utm_campaign?: string;
-  utm_term?: string;
-  utm_content?: string;
-  gclid?: string;
-  referrer?: string;
-  user_agent?: string;
-  honeypot?: string;
+interface NotificationLead {
+  publicLeadType: PublicLeadType;
+  isDuplicate: boolean;
 }
 
-// Generate random hex token
-function generateToken(bytes: number = 16): string {
-  const array = new Uint8Array(bytes);
-  crypto.getRandomValues(array);
-  return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
+type JsonReadResult =
+  | { ok: true; body: Record<string, unknown> }
+  | { ok: false; status: number; code: string };
+
+function json(
+  payload: unknown,
+  status = 200,
+  extraHeaders: Record<string, string> = {},
+): Response {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+      ...corsHeaders,
+      ...extraHeaders,
+    },
+  });
 }
 
-// Calculate pre-score from form data
-function calculatePreScore(data: LeadSubmission): { score: number; bucket: 'red' | 'yellow' | 'green' } {
-  let score = 50;
-
-  // Budget scoring
-  const budget = data.budget_range?.toLowerCase() || '';
-  if (budget.includes('7k') || budget.includes('7000') || budget.includes('10k') || budget.includes('10000')) {
-    score += 10;
-  } else if (budget.includes('3k') || budget.includes('3000') || budget.includes('5k') || budget.includes('5000')) {
-    score += 5;
-  } else if (budget.includes('<1k') || budget.includes('unter 1') || budget.includes('500') || budget === '') {
-    score -= 10;
-  }
-
-  // Capacity scoring
-  const capacity = data.capacity_range?.toLowerCase() || '';
-  if (capacity.includes('30') || capacity.includes('20') || capacity.includes('16')) {
-    score += 10;
-  } else if (capacity.includes('10') || capacity.includes('15')) {
-    score += 5;
-  } else if (capacity.includes('1-5') || capacity.includes('1 -') || capacity.includes('0-5')) {
-    score -= 10;
-  }
-
-  // Website scoring
-  if (data.website_url) {
-    if (data.website_url.startsWith('https://')) {
-      score += 5;
-    } else if (data.website_url.startsWith('http://')) {
-      score += 2;
+async function readJsonBody(req: Request): Promise<JsonReadResult> {
+  const rawLength = req.headers.get("content-length");
+  if (rawLength !== null) {
+    const declaredLength = Number(rawLength);
+    if (!Number.isInteger(declaredLength) || declaredLength < 0) {
+      return { ok: false, status: 400, code: "invalid_content_length" };
+    }
+    if (declaredLength > MAX_BODY_BYTES) {
+      return { ok: false, status: 413, code: "request_too_large" };
     }
   }
 
-  // Clamp score
-  score = Math.max(0, Math.min(100, score));
+  if (!req.body) return { ok: false, status: 400, code: "invalid_json" };
 
-  // Determine bucket
-  let bucket: 'red' | 'yellow' | 'green';
-  if (score < 40) {
-    bucket = 'red';
-  } else if (score < 75) {
-    bucket = 'yellow';
-  } else {
-    bucket = 'green';
-  }
+  const reader = req.body.getReader();
+  const decoder = new TextDecoder();
+  let totalBytes = 0;
+  let raw = "";
 
-  return { score, bucket };
-}
-
-// Hash IP for privacy
-async function hashIP(ip: string): Promise<string> {
-  const salt = Deno.env.get("IP_HASH_SALT") || "itsfeierabend-default-salt";
-  const encoder = new TextEncoder();
-  const data = encoder.encode(ip + salt);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-// Normalize website URL
-function normalizeUrl(url: string | undefined): string | null {
-  if (!url) return null;
-  let normalized = url.trim();
-  if (!normalized) return null;
-  if (!normalized.startsWith("http://") && !normalized.startsWith("https://")) {
-    normalized = "https://" + normalized;
-  }
-  return normalized;
-}
-
-// Validate email
-function isValidEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-}
-
-// Validate URL
-function isValidUrl(url: string): boolean {
   try {
-    new URL(url);
-    return true;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_BODY_BYTES) {
+        await reader.cancel("request_too_large");
+        return { ok: false, status: 413, code: "request_too_large" };
+      }
+      raw += decoder.decode(value, { stream: true });
+    }
+    raw += decoder.decode();
   } catch {
-    return false;
+    return { ok: false, status: 400, code: "invalid_body" };
+  } finally {
+    reader.releaseLock();
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return { ok: false, status: 400, code: "invalid_json_object" };
+    }
+    return { ok: true, body: parsed as Record<string, unknown> };
+  } catch {
+    return { ok: false, status: 400, code: "invalid_json" };
   }
 }
 
-// Send Slack notification
-async function sendSlackNotification(lead: any, adminUrl: string): Promise<void> {
-  const slackWebhookUrl = Deno.env.get("SLACK_WEBHOOK_URL");
-  if (!slackWebhookUrl) {
-    console.log("Slack notification disabled - SLACK_WEBHOOK_URL not set");
+async function sendSlackNotification(
+  lead: NotificationLead,
+  adminUrl: string,
+): Promise<void> {
+  const webhookUrl = Deno.env.get("SLACK_WEBHOOK_URL");
+  if (!webhookUrl) {
+    console.log(
+      "Slack notification disabled: SLACK_WEBHOOK_URL is not configured",
+    );
     return;
   }
 
-  try {
-    const leadType = lead.lead_type === 'free_audit' ? '📊 Audit' : '📞 Call';
-    const message = {
-      text: `${leadType} | ${lead.name} | ${lead.email} | ${lead.industry} | ${lead.service_area}`,
-      blocks: [
-        {
-          type: "section",
-          text: {
-            type: "mrkdwn",
-            text: `*[New Lead]* ${leadType}\n*Name:* ${lead.name}\n*Email:* ${lead.email}\n*Industry:* ${lead.industry}\n*Area:* ${lead.service_area}`
-          }
-        },
-        {
-          type: "actions",
-          elements: [
-            {
-              type: "button",
-              text: {
-                type: "plain_text",
-                text: "View in Admin"
-              },
-              url: adminUrl
-            }
-          ]
-        }
-      ]
-    };
+  const typeLabel = {
+    free_audit: "📊 Legacy-Audit",
+    free_call: "📞 Legacy-Call",
+    contact: "✉️ Kontaktanfrage",
+    partner_application: "🤝 Partneranfrage",
+  }[lead.publicLeadType];
+  const duplicateLabel = lead.isDuplicate ? " · mögliches Duplikat" : "";
 
-    const response = await fetch(slackWebhookUrl, {
+  try {
+    const response = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(message),
+      body: JSON.stringify({
+        text: `${typeLabel}${duplicateLabel} · neuer Datensatz im geschützten Admin`,
+        blocks: [
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: [
+                `*Neue ${typeLabel}*${duplicateLabel}`,
+                "Kontaktdaten und Geschäftskontext bleiben im geschützten itsFeierabend.ch-Admin.",
+              ].join("\n"),
+            },
+          },
+          {
+            type: "actions",
+            elements: [
+              {
+                type: "button",
+                text: { type: "plain_text", text: "Im Admin öffnen" },
+                url: adminUrl,
+              },
+            ],
+          },
+        ],
+      }),
     });
 
-    if (response.ok) {
-      console.log("Slack notification sent successfully");
-    } else {
-      console.error("Slack notification failed:", await response.text());
+    if (!response.ok) {
+      console.error(`Slack notification failed with status ${response.status}`);
     }
-  } catch (err) {
-    console.error("Slack notification error:", err);
+  } catch (error) {
+    console.error(
+      "Slack notification failed:",
+      error instanceof Error ? error.message : "unknown_error",
+    );
   }
 }
 
-// Check for duplicate leads
-async function checkDuplicate(
-  supabase: any, 
-  email: string, 
-  leadType: string
-): Promise<{ isDuplicate: boolean; duplicateOf: string | null }> {
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  
-  const { data: existingLead } = await supabase
+function runAfterResponse(promise: Promise<unknown>): void {
+  if (typeof EdgeRuntime !== "undefined" && EdgeRuntime?.waitUntil) {
+    EdgeRuntime.waitUntil(promise);
+    return;
+  }
+  void promise;
+}
+
+async function handleRequest(req: Request): Promise<Response> {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
+  if (req.method !== "POST") {
+    return json(
+      { error: "Method not allowed.", code: "method_not_allowed" },
+      405,
+      { Allow: "POST, OPTIONS" },
+    );
+  }
+
+  const contentType = req.headers.get("content-type")
+    ?.split(";", 1)[0]
+    .trim()
+    .toLowerCase();
+  if (contentType !== "application/json") {
+    return json(
+      {
+        error: "Content-Type must be application/json.",
+        code: "unsupported_media_type",
+      },
+      415,
+    );
+  }
+
+  const parsed = await readJsonBody(req);
+  if (!parsed.ok) {
+    return json({ error: parsed.code, code: parsed.code }, parsed.status);
+  }
+
+  const body = parsed.body;
+  const honeypot = contractText(body.honeypot, 200);
+  if (honeypot) {
+    // Deliberately indistinguishable from a successful submission.
+    return json({ success: true }, 200);
+  }
+
+  const validation = validateAndSanitizeLead(body);
+  if (!validation.ok) {
+    return json(
+      {
+        error: validation.language === "de"
+          ? "Bitte prüfen Sie die markierten Felder."
+          : "Please check the highlighted fields.",
+        errors: validation.errors,
+        code: "validation_error",
+      },
+      400,
+    );
+  }
+  const leadInput = validation.lead;
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.error("submit-lead configuration is incomplete");
+    return json(
+      {
+        error: "Service temporarily unavailable.",
+        code: "service_unavailable",
+      },
+      503,
+    );
+  }
+
+  const ip = clientIp(req);
+  const ipHash = await hashIp(ip);
+  if (!ipHash) {
+    console.error("submit-lead could not determine a client IP");
+    return json(
+      {
+        error: "Service temporarily unavailable.",
+        code: "client_ip_unavailable",
+      },
+      503,
+    );
+  }
+
+  const supabase = createClient(supabaseUrl, serviceRoleKey);
+  const rateLimitSince = new Date(Date.now() - RATE_LIMIT_WINDOW_MS)
+    .toISOString();
+  const { count: recentSubmissions, error: rateLimitReadError } = await supabase
+    .from("rate_limits")
+    .select("id", { count: "exact", head: true })
+    .eq("scope", RATE_LIMIT_SCOPE)
+    .eq("ip_hash", ipHash)
+    .gte("created_at", rateLimitSince);
+
+  if (rateLimitReadError) {
+    console.error("submit-lead rate-limit check failed");
+    return json(
+      {
+        error: "Service temporarily unavailable.",
+        code: "rate_limit_unavailable",
+      },
+      503,
+    );
+  }
+  if ((recentSubmissions ?? 0) >= RATE_LIMIT_MAX) {
+    return json(
+      {
+        error: leadInput.language === "de"
+          ? "Zu viele Versuche. Bitte warten Sie kurz."
+          : "Too many attempts. Please wait a moment.",
+        code: "rate_limit",
+      },
+      429,
+      { "Retry-After": String(RATE_LIMIT_WINDOW_MS / 1_000) },
+    );
+  }
+
+  const { error: rateLimitWriteError } = await supabase
+    .from("rate_limits")
+    .insert({ ip_hash: ipHash, scope: RATE_LIMIT_SCOPE });
+  if (rateLimitWriteError) {
+    console.error("submit-lead rate-limit record failed");
+    return json(
+      {
+        error: "Service temporarily unavailable.",
+        code: "rate_limit_unavailable",
+      },
+      503,
+    );
+  }
+
+  const duplicateSince = new Date(Date.now() - DUPLICATE_WINDOW_MS)
+    .toISOString();
+  const { data: existingLead, error: duplicateReadError } = await supabase
     .from("leads")
     .select("id")
-    .eq("email", email.toLowerCase().trim())
-    .eq("lead_type", leadType)
-    .gte("created_at", thirtyDaysAgo)
+    .eq("email", leadInput.email)
+    .eq("lead_type", leadInput.storedLeadType)
+    .gte("created_at", duplicateSince)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  if (existingLead) {
-    return { isDuplicate: true, duplicateOf: existingLead.id };
+  if (duplicateReadError) {
+    console.error("submit-lead duplicate check failed");
+    return json(
+      {
+        error: "Service temporarily unavailable.",
+        code: "duplicate_check_unavailable",
+      },
+      503,
+    );
   }
-  
-  return { isDuplicate: false, duplicateOf: null };
+
+  const isDuplicate = Boolean(existingLead?.id);
+  const duplicateOf = existingLead?.id ?? null;
+  const consentAt = leadInput.consentProcessing
+    ? new Date().toISOString()
+    : null;
+  const userAgent = contractText(req.headers.get("user-agent"), 500);
+
+  const { data: insertedLead, error: insertError } = await supabase
+    .from("leads")
+    .insert({
+      language: leadInput.language,
+      lead_type: leadInput.storedLeadType,
+      industry: leadInput.industry ?? "not_specified",
+      service_area: leadInput.serviceArea,
+      website_url: leadInput.websiteUrl,
+      budget_range: leadInput.budgetRange,
+      capacity_range: leadInput.capacityRange,
+      name: leadInput.name,
+      email: leadInput.email,
+      phone: leadInput.phone,
+      message: leadInput.message,
+      preferred_times: leadInput.preferredTimes,
+      utm_source: leadInput.utmSource,
+      utm_medium: leadInput.utmMedium,
+      utm_campaign: leadInput.utmCampaign,
+      utm_term: leadInput.utmTerm,
+      utm_content: leadInput.utmContent,
+      gclid: leadInput.gclid,
+      referrer: leadInput.referrer,
+      user_agent: userAgent,
+      ip_hash: ipHash,
+      company_name: leadInput.companyName,
+      region: leadInput.region,
+      primary_goal: leadInput.primaryGoal,
+      primary_lead_source: leadInput.primaryLeadSource,
+      challenges: [],
+      systems: leadInput.systems,
+      landing_page: leadInput.landingPage,
+      audit_type: null,
+      keyword: leadInput.utmTerm,
+      lead_score: null,
+      consent_processing: leadInput.consentProcessing,
+      consent_marketing: leadInput.consentMarketing,
+      consent_at: consentAt,
+      consent_version: leadInput.consentVersion,
+      public_token: null,
+      pre_score_total: null,
+      pre_score_bucket: null,
+      is_duplicate: isDuplicate,
+      duplicate_of: duplicateOf,
+    })
+    .select("id")
+    .single();
+
+  if (insertError || !insertedLead?.id) {
+    console.error("submit-lead insert failed");
+    return json(
+      {
+        error: leadInput.language === "de"
+          ? "Die Anfrage konnte nicht gespeichert werden."
+          : "The enquiry could not be saved.",
+        code: "lead_db_error",
+      },
+      500,
+    );
+  }
+
+  const adminUrl = "https://itsfeierabend.ch/admin/leads";
+  runAfterResponse(sendSlackNotification({
+    publicLeadType: leadInput.publicLeadType,
+    isDuplicate,
+  }, adminUrl));
+
+  const cleanupBefore = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  runAfterResponse(
+    Promise.resolve(
+      supabase
+        .from("rate_limits")
+        .delete()
+        .eq("scope", RATE_LIMIT_SCOPE)
+        .lt("created_at", cleanupBefore),
+    )
+      .then(({ error }) => {
+        if (error) console.error("submit-lead rate-limit cleanup failed");
+      })
+      .catch(() => {
+        console.error("submit-lead rate-limit cleanup failed");
+      }),
+  );
+
+  // The live legacy hook reads `lead_id` and maps it to its internal `leadId`
+  // before starting business-scanner. Current contracts deliberately receive
+  // no row identifier or duplicate signal.
+  return json(leadSuccessPayload(leadInput.contract, insertedLead.id));
 }
 
 serve(async (req: Request): Promise<Response> => {
-  // Handle CORS preflight
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    const body: LeadSubmission = await req.json();
-
-    // Honeypot check - spam protection
-    if (body.honeypot && body.honeypot.trim() !== "") {
-      console.log("Honeypot triggered - rejecting submission");
-      return new Response(
-        JSON.stringify({ success: true }), // Fake success to fool bots
-        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    // Get client IP for rate limiting
-    const clientIP = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || 
-                     req.headers.get("cf-connecting-ip") || 
-                     "unknown";
-    const ipHash = await hashIP(clientIP);
-
-    // Rate limiting: max 3 submissions per IP per 10 minutes
-    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-    
-    const { count: recentSubmissions } = await supabase
-      .from("rate_limits")
-      .select("*", { count: "exact", head: true })
-      .eq("ip_hash", ipHash)
-      .gte("created_at", tenMinutesAgo);
-
-    if (recentSubmissions !== null && recentSubmissions >= 3) {
-      console.log(`Rate limit exceeded for IP hash: ${ipHash.substring(0, 8)}...`);
-      return new Response(
-        JSON.stringify({ 
-          error: body.language === "de" 
-            ? "Zu viele Versuche. Bitte warte kurz." 
-            : "Too many attempts. Please wait a moment.",
-          code: "rate_limit"
-        }),
-        { status: 429, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    // Validation
-    const errors: Record<string, string> = {};
-    const isDE = body.language === "de";
-
-    if (!body.name?.trim()) {
-      errors.name = isDE ? "Bitte ausfüllen." : "Please fill this in.";
-    }
-
-    if (!body.email?.trim()) {
-      errors.email = isDE ? "Bitte ausfüllen." : "Please fill this in.";
-    } else if (!isValidEmail(body.email)) {
-      errors.email = isDE ? "Bitte prüfe deine E-Mail-Adresse." : "Please check your email.";
-    }
-
-    if (!body.industry?.trim()) {
-      errors.industry = isDE ? "Bitte ausfüllen." : "Please fill this in.";
-    }
-
-    if (!body.service_area?.trim()) {
-      errors.service_area = isDE ? "Bitte ausfüllen." : "Please fill this in.";
-    }
-
-    // Audit-specific validation
-    if (body.lead_type === "free_audit") {
-      const normalizedUrl = normalizeUrl(body.website_url);
-      if (!normalizedUrl) {
-        errors.website_url = isDE ? "Bitte ausfüllen." : "Please fill this in.";
-      } else if (!isValidUrl(normalizedUrl)) {
-        errors.website_url = isDE ? "Bitte eine gültige URL eingeben." : "Please enter a valid URL.";
-      }
-      body.website_url = normalizedUrl || undefined;
-
-      if (!body.budget_range?.trim()) {
-        errors.budget_range = isDE ? "Bitte ausfüllen." : "Please fill this in.";
-      }
-
-      if (!body.capacity_range?.trim()) {
-        errors.capacity_range = isDE ? "Bitte ausfüllen." : "Please fill this in.";
-      }
-    }
-
-    if (Object.keys(errors).length > 0) {
-      return new Response(
-        JSON.stringify({ errors, code: "validation_error" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    // Record rate limit entry
-    await supabase.from("rate_limits").insert({ ip_hash: ipHash });
-
-    // Check for duplicates
-    const { isDuplicate, duplicateOf } = await checkDuplicate(
-      supabase, 
-      body.email, 
-      body.lead_type
-    );
-
-    if (isDuplicate) {
-      console.log(`Duplicate lead detected for email: ${body.email}, duplicate of: ${duplicateOf}`);
-    }
-
-    // Generate public token and pre-score for audits
-    let publicToken: string | null = null;
-    let preScoreTotal: number | null = null;
-    let preScoreBucket: string | null = null;
-
-    if (body.lead_type === "free_audit") {
-      publicToken = generateToken(16);
-      const preScore = calculatePreScore(body);
-      preScoreTotal = preScore.score;
-      preScoreBucket = preScore.bucket;
-    }
-
-    // Insert lead
-    const { data: lead, error: insertError } = await supabase
-      .from("leads")
-      .insert({
-        language: body.language,
-        lead_type: body.lead_type,
-        industry: body.industry.trim(),
-        service_area: body.service_area.trim(),
-        website_url: body.website_url || null,
-        budget_range: body.budget_range?.trim() || null,
-        capacity_range: body.capacity_range?.trim() || null,
-        name: body.name.trim(),
-        email: body.email.trim().toLowerCase(),
-        phone: body.phone?.trim() || null,
-        message: body.message?.trim() || null,
-        preferred_times: body.preferred_times?.trim() || null,
-        utm_source: body.utm_source || null,
-        utm_medium: body.utm_medium || null,
-        utm_campaign: body.utm_campaign || null,
-        utm_term: body.utm_term || null,
-        utm_content: body.utm_content || null,
-        gclid: body.gclid || null,
-        referrer: body.referrer || null,
-        user_agent: body.user_agent || null,
-        ip_hash: ipHash,
-        public_token: publicToken,
-        pre_score_total: preScoreTotal,
-        pre_score_bucket: preScoreBucket,
-        is_duplicate: isDuplicate,
-        duplicate_of: duplicateOf,
-      })
-      .select()
-      .single();
-
-    if (insertError) {
-      console.error("Insert error:", insertError);
-      return new Response(
-        JSON.stringify({ 
-          error: isDE 
-            ? "Das hat grad nicht geklappt. Bitte nochmals versuchen." 
-            : "Something went wrong. Please try again.",
-          code: "server_error"
-        }),
-        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    console.log(`Lead created successfully: ${lead.id} (${body.lead_type})${isDuplicate ? ' [DUPLICATE]' : ''}`);
-
-    // Send Slack notification (fire and forget)
-    const adminUrl = `https://itsfeierabend.ch/admin/leads/${lead.id}`;
-    sendSlackNotification(lead, adminUrl).catch(err => console.error('Slack error:', err));
-
-    // Optional: Send confirmation email via Resend
-    const resendApiKey = Deno.env.get("RESEND_API_KEY");
-    if (resendApiKey && body.lead_type === "free_audit" && !isDuplicate) {
-      try {
-        const emailSubject = isDE ? "Wir haben dein Audit erhalten" : "We got your audit";
-        const reportUrl = isDE 
-          ? `https://itsfeierabend.ch/gratis-audit/report/${publicToken}`
-          : `https://itsfeierabend.ch/en/free-audit/report/${publicToken}`;
-        const callUrl = isDE ? "https://itsfeierabend.ch/gratis-call" : "https://itsfeierabend.ch/en/free-call";
-        const privacyUrl = isDE ? "https://itsfeierabend.ch/datenschutz" : "https://itsfeierabend.ch/en/privacy";
-        
-        const emailHtml = isDE ? `
-          <h2>Danke für deine Audit-Anfrage, ${body.name}!</h2>
-          <p>Wir haben deine Anfrage erhalten.</p>
-          <p><a href="${reportUrl}">Hier findest du deinen Vorab-Score</a></p>
-          <p>Das vollständige Audit mit manueller Prüfung erhältst du innerhalb von 48 Stunden.</p>
-          <p>Wenn du willst, kannst du schon jetzt einen <a href="${callUrl}">Gratis Call buchen</a>.</p>
-          <br>
-          <p>Beste Grüsse,<br>Das itsFeierabend.ch Team</p>
-          <hr>
-          <p style="font-size: 12px; color: #666;"><a href="${privacyUrl}">Datenschutz</a></p>
-        ` : `
-          <h2>Thanks for your audit request, ${body.name}!</h2>
-          <p>We've received your request.</p>
-          <p><a href="${reportUrl}">View your pre-score here</a></p>
-          <p>You'll receive the full audit with manual review within 48 hours.</p>
-          <p>If you'd like, you can already <a href="${callUrl}">book a free call</a>.</p>
-          <br>
-          <p>Best regards,<br>The itsFeierabend.ch Team</p>
-          <hr>
-          <p style="font-size: 12px; color: #666;"><a href="${privacyUrl}">Privacy Policy</a></p>
-        `;
-
-        const emailResponse = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${resendApiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: "itsFeierabend.ch <noreply@itsfeierabend.ch>",
-            to: [body.email],
-            subject: emailSubject,
-            html: emailHtml,
-          }),
-        });
-
-        if (emailResponse.ok) {
-          console.log(`Confirmation email sent to ${body.email}`);
-        } else {
-          console.error("Email send failed:", await emailResponse.text());
-        }
-      } catch (emailError) {
-        console.error("Email error:", emailError);
-      }
-    } else if (!resendApiKey) {
-      console.log("Email disabled - RESEND_API_KEY not set");
-    }
-
-    // Clean up old rate limit entries (older than 1 hour)
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-    await supabase.from("rate_limits").delete().lt("created_at", oneHourAgo);
-
-    // Build response with report URL for audits
-    const response: Record<string, any> = { 
-      success: true, 
-      lead_id: lead.id,
-    };
-
-    if (body.lead_type === "free_audit" && publicToken) {
-      response.reportUrl = isDE 
-        ? `/gratis-audit/report/${publicToken}`
-        : `/en/free-audit/report/${publicToken}`;
-    }
-
-    return new Response(
-      JSON.stringify(response),
-      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
-    );
-
+    return await handleRequest(req);
   } catch (error) {
-    console.error("Unexpected error:", error);
-    return new Response(
-      JSON.stringify({ 
-        error: "Something went wrong. Please try again.",
-        code: "server_error"
-      }),
-      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+    console.error(
+      "submit-lead unexpected failure:",
+      error instanceof Error ? error.message : "unknown_error",
+    );
+    return json(
+      { error: "Service temporarily unavailable.", code: "server_error" },
+      500,
     );
   }
 });
