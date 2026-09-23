@@ -194,10 +194,18 @@ export async function hashIp(ip: string | null): Promise<string | null> {
 }
 
 export function clientIp(req: Request): string | null {
+  const firstNonEmpty = (name: string, takeFirst = false): string | null => {
+    const raw = req.headers.get(name);
+    if (!raw) return null;
+    const value = (takeFirst ? raw.split(",")[0] : raw).trim();
+    return value || null;
+  };
+
+  // Prefer gateway-attested client-IP headers. x-forwarded-for is only a
+  // compatibility fallback because upstream proxies may append caller input.
   return (
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    req.headers.get("cf-connecting-ip") ??
-    req.headers.get("x-real-ip") ??
-    null
+    firstNonEmpty("cf-connecting-ip") ??
+    firstNonEmpty("x-real-ip") ??
+    firstNonEmpty("x-forwarded-for", true)
   );
 }
