@@ -1,5 +1,8 @@
+// deno-lint-ignore-file no-explicit-any no-import-prefix
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from 'https://esm.sh/@supabase/supabase-js@2/cors'
+import { clientIp, hashIp, normalizeDomain } from '../_shared/audit-utils.ts'
+import { resolveTransitionalAuthMode } from '../_shared/public-contracts.ts'
 
 // ── Types ──────────────────────────────────────────────────────────
 interface ScanRequest {
@@ -14,6 +17,12 @@ interface RawEvidence {
   firecrawl?: { scrape?: any; map?: any; error?: string }
   timing: Record<string, number>
 }
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const LEGACY_SCAN_WINDOW_MS = 60 * 60 * 1000
+const LEGACY_SCAN_PER_IP_MAX = 1
+const LEGACY_SCAN_GLOBAL_MAX = 10
 
 // ── Helpers ─────────────────────────────────────────────────────────
 function normalizeUrl(input: string): string {
@@ -181,6 +190,36 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'method_not_allowed' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  const legacyPublicEnabled =
+    Deno.env.get('LEGACY_PUBLIC_SCANNER_ENABLED') === 'true'
+  const authMode = serviceKey
+    ? resolveTransitionalAuthMode(
+      req.headers.get('authorization'),
+      req.headers.get('apikey'),
+      {
+        serviceKey,
+        publicKeys: [
+          Deno.env.get('SUPABASE_ANON_KEY'),
+          Deno.env.get('SUPABASE_PUBLISHABLE_KEY'),
+        ],
+        legacyPublicEnabled,
+      },
+    )
+    : null
+  if (!serviceKey || !authMode) {
+    return new Response(JSON.stringify({ error: 'unauthorized' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
 
   const t0 = Date.now()
 
@@ -200,34 +239,118 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      serviceKey,
     )
 
-    // Create report row
-    const token = crypto.randomUUID()
-    const totalChecks = 3 // pagespeed, observatory, firecrawl
+    let token: string
 
-    const { error: insertError } = await supabase
-      .from('analysis_reports')
-      .insert({
-        token,
-        site_name: host,
-        lead_id: leadId || null,
-        scan_status: 'collecting',
-        language: language || 'de',
-        checks_passed: 0,
-        checks_total: totalChecks,
-        scan_version: 'v1.0-evidence',
-        data_sources_used: [],
-      })
+    if (authMode === 'legacy_public') {
+      if (!leadId || !UUID_PATTERN.test(leadId)) {
+        return new Response(JSON.stringify({ error: 'eligible lead is required' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
 
-    if (insertError) {
-      console.error('Insert error:', insertError)
-      return new Response(JSON.stringify({ error: 'Failed to create scan' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      const normalizedWebsite = normalizeDomain(websiteUrl)
+      if ('error' in normalizedWebsite) {
+        return new Response(JSON.stringify({ error: 'websiteUrl is invalid' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      const ipHash = await hashIp(clientIp(req))
+      if (!ipHash) {
+        return new Response(JSON.stringify({ error: 'scan guard unavailable' }), {
+          status: 503,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      const { data: claimRows, error: claimError } = await supabase.rpc(
+        'claim_legacy_analysis_scan',
+        {
+          p_lead_id: leadId,
+          p_normalized_domain: normalizedWebsite.domain,
+          p_site_name: normalizedWebsite.domain,
+          p_language: language === 'en' ? 'en' : 'de',
+          p_ip_hash: ipHash,
+          p_per_ip_limit: LEGACY_SCAN_PER_IP_MAX,
+          p_global_limit: LEGACY_SCAN_GLOBAL_MAX,
+        },
+      )
+      const claim = Array.isArray(claimRows) ? claimRows[0] : null
+      if (claimError) {
+        console.error('Legacy scan claim failed:', claimError)
+        return new Response(JSON.stringify({ error: 'scan guard unavailable' }), {
+          status: 503,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      if (claim?.deny_reason) {
+        const rateLimited = claim.deny_reason === 'per_ip_hourly_exceeded' ||
+          claim.deny_reason === 'global_hourly_exceeded'
+        return new Response(
+          JSON.stringify({
+            error: rateLimited
+              ? 'scan rate limit reached'
+              : 'eligible lead is required',
+          }),
+          {
+            status: rateLimited ? 429 : 403,
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+              ...(rateLimited
+                ? { 'Retry-After': String(LEGACY_SCAN_WINDOW_MS / 1000) }
+                : {}),
+            },
+          },
+        )
+      }
+      if (!claim?.scan_token) {
+        return new Response(JSON.stringify({ error: 'scan guard unavailable' }), {
+          status: 503,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      token = claim.scan_token
+      if (claim.scan_reused) {
+        return new Response(
+          JSON.stringify({ success: true, token, reused: true }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          },
+        )
+      }
+    } else {
+      token = crypto.randomUUID()
+      const { error: insertError } = await supabase
+        .from('analysis_reports')
+        .insert({
+          token,
+          site_name: host,
+          lead_id: leadId || null,
+          scan_status: 'collecting',
+          language: language || 'de',
+          checks_passed: 0,
+          checks_total: 3,
+          scan_version: 'v1.0-evidence',
+          data_sources_used: [],
+        })
+
+      if (insertError) {
+        console.error('Insert error:', insertError)
+        return new Response(JSON.stringify({ error: 'Failed to create scan' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
     }
+
+    const totalChecks = 3 // pagespeed, observatory, firecrawl
 
     // Return token immediately, then continue processing in background
     const responsePromise = new Response(JSON.stringify({ success: true, token }), {
@@ -242,7 +365,7 @@ Deno.serve(async (req) => {
     let checksCompleted = 0
 
     // Run all 3 collectors in parallel
-    const [psResult, obsResult, fcResult] = await Promise.allSettled([
+    await Promise.allSettled([
       (async () => {
         const t = Date.now()
         const result = await collectPageSpeed(url)

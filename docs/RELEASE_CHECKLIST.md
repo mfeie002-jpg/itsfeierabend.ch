@@ -7,6 +7,8 @@
 | `SUPABASE_URL` | Edge Functions | Cloud project URL (auto) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Edge Functions | Server writes to `audit_requests` / `audit_events` |
 | `SUPABASE_ANON_KEY` | Edge Functions | Public reads via RLS-safe helpers |
+| `SUPABASE_PUBLISHABLE_KEY` | Edge Functions | Alternate public key accepted by the transitional scanner guard |
+| `LEGACY_PUBLIC_SCANNER_ENABLED` | Edge Functions | Set to `true` only for the bounded cutover window while `AnalysisRequestForm` still calls `business-scanner` from the browser; default/absent is fail-closed |
 | `LOVABLE_API_KEY` | Edge Functions | Semrush gateway auth |
 | `SEMRUSH_API_KEY` | Edge Functions | Semrush connection key (managed by connector) |
 | `TURNSTILE_SECRET_KEY` | Edge Functions | Cloudflare Turnstile server-side verify. **Required for beta** — when unset, bot check fails open. |
@@ -65,9 +67,16 @@
 
 ## Launch order
 
-1. Configure `TURNSTILE_SECRET_KEY` (Edge Function secret) and
-   `VITE_TURNSTILE_SITE_KEY` (build env).
-2. Publish the app.
-3. Run the manual test cases against the production URL.
-4. Enable analytics dashboards / alerting on `audit_events.rate_limited` and
+1. Apply only `20260725050000` → `20260725060000` → `20260725070000` →
+   `20260910090000`, then verify the ledger, RPC signatures and RLS grants
+   before deploying either RPC consumer.
+2. Configure `TURNSTILE_SECRET_KEY`, the public Supabase key available to the
+   Edge runtime, `LEGACY_PUBLIC_SCANNER_ENABLED=true` for the compatibility
+   window, and `VITE_TURNSTILE_SITE_KEY` for the build.
+3. Deploy the Edge Functions and app from one exact reviewed source SHA.
+4. Run the manual test cases against the production URL, including a bounded
+   browser-origin scanner request that proves the RPC guard path.
+5. Disable `LEGACY_PUBLIC_SCANNER_ENABLED` after the legacy browser caller is
+   removed or routed through an authenticated internal path.
+6. Enable analytics dashboards / alerting on `audit_events.rate_limited` and
    `audit_events.bot_check_failed`.
