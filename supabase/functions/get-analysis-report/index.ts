@@ -39,12 +39,10 @@ serve(async (req) => {
       .from('analysis_reports')
       .select([
         'ai_interpretation', 'categories', 'checks_passed', 'checks_total',
-        'consequences', 'created_at', 'critical_issues', 'current_revenue',
-        'data_sources_used', 'hourly_rate', 'info_issues', 'language',
-        'monthly_loss', 'normalized_signals', 'overall_score',
-        'projected_revenue', 'scan_duration_ms', 'scan_status', 'scan_version',
-        'scoring_details', 'site_name', 'total_hours', 'total_issues',
-        'viewed_at', 'warning_issues',
+        'created_at', 'critical_issues', 'data_sources_used', 'info_issues',
+        'normalized_signals', 'overall_score', 'scan_duration_ms', 'scan_status',
+        'scan_version', 'scoring_details', 'site_name', 'total_issues',
+        'warning_issues',
       ].join(','))
       .eq('token', token)
       .maybeSingle();
