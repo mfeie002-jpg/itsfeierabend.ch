@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | `SUPABASE_URL` | Edge Functions | Cloud project URL (auto) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Edge Functions | Server writes to `audit_requests` / `audit_events` |
-| `SUPABASE_ANON_KEY` | Edge Functions | Public reads via RLS-safe helpers |
+| `SUPABASE_ANON_KEY` | Edge Functions | Exact public bearer accepted by the legacy scanner only during the bounded cutover window |
 | `SUPABASE_PUBLISHABLE_KEY` | Edge Functions | Alternate public key accepted by the transitional scanner guard |
 | `LEGACY_PUBLIC_SCANNER_ENABLED` | Edge Functions | Set to `true` only for the bounded cutover window while `AnalysisRequestForm` still calls `business-scanner` from the browser; default/absent is fail-closed |
 | `LOVABLE_API_KEY` | Edge Functions | Semrush gateway auth |
@@ -23,7 +23,7 @@
 - **Per IP:** 5 audits / 24h (`AUDIT_LIMIT_PER_IP_DAILY`)
 - **Global:** 200 audits / 24h (`AUDIT_LIMIT_GLOBAL_DAILY`)
 - **Per domain:** 1 fresh audit / 30 days (`AUDIT_DOMAIN_COOLDOWN_DAYS`) — subsequent
-  submissions for the same normalised domain reuse the existing report token.
+  submissions are rejected without exposing the existing private report token.
 - Enforcement lives in `supabase/functions/_shared/audit-limits.ts` and is backed by
   the `rate_limits` and `audit_requests` tables.
 
@@ -47,8 +47,8 @@
 2. Submit `http://localhost/`, `http://127.0.0.1/`, `ftp://foo.com/`, and a
    naked IP `http://1.2.3.4/` → each is rejected with a clear message; a
    row exists in `audit_events` with `event_type='url_rejected'`.
-3. Submit the same domain twice in a minute → second call returns the same
-   token (`reused: true`) and a `domain_throttled` audit event.
+3. Submit the same domain twice in a minute → the second call returns HTTP 409,
+   exposes no token, creates no second audit row, and logs a `domain_throttled` event.
 4. From the same IP, submit 6 different domains within 24h → the 6th call
    returns HTTP 429 and a `rate_limited` audit event.
 5. Submit without the Turnstile widget resolving → server returns
@@ -76,7 +76,12 @@
 3. Deploy the Edge Functions and app from one exact reviewed source SHA.
 4. Run the manual test cases against the production URL, including a bounded
    browser-origin scanner request that proves the RPC guard path.
-5. Disable `LEGACY_PUBLIC_SCANNER_ENABLED` after the legacy browser caller is
-   removed or routed through an authenticated internal path.
-6. Enable analytics dashboards / alerting on `audit_events.rate_limited` and
+5. After the legacy browser caller is removed, unset or set
+   `LEGACY_PUBLIC_SCANNER_ENABLED=false`, change `verify_jwt` back to `true` for
+   `business-scanner`, `scan-status` and `get-analysis-report`, redeploy those
+   three functions, and verify an anonymous request returns HTTP 401 while the
+   service-role path remains accepted.
+6. Remove the `legacy_v0` request/response branches only after the rollback
+   window for the old frontend has closed.
+7. Enable analytics dashboards / alerting on `audit_events.rate_limited` and
    `audit_events.bot_check_failed`.
