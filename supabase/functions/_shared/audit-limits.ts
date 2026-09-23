@@ -20,15 +20,12 @@ export interface LimitCheck {
   ok: boolean;
   reason?:
     | "per_ip_daily_exceeded"
-    | "global_daily_exceeded"
-    | "domain_recently_audited";
-  existingToken?: string;
-  existingId?: string;
+    | "global_daily_exceeded";
 }
 
 export async function checkLimits(
   supabase: SupabaseClient,
-  args: { ipHash: string | null; normalizedDomain: string },
+  args: { ipHash: string | null },
 ): Promise<LimitCheck> {
   const since = new Date(Date.now() - DAY_MS).toISOString();
 
@@ -53,28 +50,6 @@ export async function checkLimits(
     if ((ipCount ?? 0) >= LIMITS.perIpDaily) {
       return { ok: false, reason: "per_ip_daily_exceeded" };
     }
-  }
-
-  // Per-domain 30-day cooldown (reuse existing token instead of new fresh audit)
-  const cooldownSince = new Date(
-    Date.now() - LIMITS.domainCooldownDays * DAY_MS,
-  ).toISOString();
-  const { data: recent } = await supabase
-    .from("audit_requests")
-    .select("id, token, status")
-    .eq("normalized_domain", args.normalizedDomain)
-    .gte("created_at", cooldownSince)
-    .in("status", ["pending", "fetching", "scoring", "ready", "partial"])
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (recent) {
-    return {
-      ok: false,
-      reason: "domain_recently_audited",
-      existingToken: recent.token as string,
-      existingId: recent.id as string,
-    };
   }
 
   return { ok: true };

@@ -13,7 +13,7 @@ export default defineConfig({
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined
     : {
-        command: "bunx vite preview --port 4173 --strictPort",
+        command: "npx --no-install vite preview --host 127.0.0.1 --port 4173 --strictPort",
         url: "http://localhost:4173",
         reuseExistingServer: !process.env.CI,
         timeout: 60_000,

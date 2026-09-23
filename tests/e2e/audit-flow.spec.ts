@@ -8,12 +8,39 @@ import { test, expect } from "@playwright/test";
 
 test("free audit flow: submit → redirect → report skeleton", async ({ page }) => {
   const fakeToken = "00000000-0000-4000-8000-000000000001";
+  const corsHeaders = {
+    "access-control-allow-origin": "*",
+    "access-control-allow-headers": "authorization, x-client-info, apikey, content-type",
+    "access-control-allow-methods": "POST, OPTIONS",
+  };
+
+  // Keep the smoke test hermetic while exercising the production form path.
+  // The real widget is external, but the form still receives a valid token.
+  await page.route("https://challenges.cloudflare.com/turnstile/**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/javascript",
+      body: `window.turnstile = {
+        render(_element, options) {
+          queueMicrotask(() => options.callback("e2e-turnstile-token"));
+          return "e2e-widget";
+        },
+        reset() {},
+        remove() {},
+      };`,
+    });
+  });
 
   // Intercept the create-audit invocation and return a successful response.
-  await page.route("**/functions/v1/create-audit", async (route) => {
+  await page.route("**/functions/v1/create-audit**", async (route) => {
+    if (route.request().method() === "OPTIONS") {
+      await route.fulfill({ status: 204, headers: corsHeaders });
+      return;
+    }
     await route.fulfill({
       status: 200,
       contentType: "application/json",
+      headers: corsHeaders,
       body: JSON.stringify({
         success: true,
         token: fakeToken,
@@ -24,9 +51,14 @@ test("free audit flow: submit → redirect → report skeleton", async ({ page }
 
   // Intercept the report fetch so the result page has something to render.
   await page.route("**/functions/v1/get-audit-report-v0**", async (route) => {
+    if (route.request().method() === "OPTIONS") {
+      await route.fulfill({ status: 204, headers: corsHeaders });
+      return;
+    }
     await route.fulfill({
       status: 200,
       contentType: "application/json",
+      headers: corsHeaders,
       body: JSON.stringify({
         status: "ready",
         overall_score: 72,
@@ -45,7 +77,7 @@ test("free audit flow: submit → redirect → report skeleton", async ({ page }
   await page.getByLabel(/Website-URL|Website URL/i).fill("https://example.com");
   await page.getByLabel(/Vorname|First name/i).fill("Test");
   await page.getByLabel(/Nachname|Last name/i).fill("Runner");
-  await page.getByLabel(/E-Mail|Email/i).fill("qa@example.com");
+  await page.getByRole("textbox", { name: /E-Mail-Adresse|Email/i }).fill("qa@example.com");
 
   // The processing consent checkbox is the first checkbox.
   await page.getByRole("checkbox").first().check();

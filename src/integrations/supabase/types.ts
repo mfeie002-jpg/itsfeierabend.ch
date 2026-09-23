@@ -158,23 +158,37 @@ export type Database = {
       }
       audit_requests: {
         Row: {
+          audit_type: string
           category_scores: Json | null
+          challenges: string[]
+          company_name: string | null
           completed_at: string | null
+          consent_at: string | null
           consent_marketing: boolean
           consent_processing: boolean
+          consent_version: string | null
           created_at: string
           cta_clicked_at: string | null
           email: string
+          email_provider_id: string | null
           email_sent_at: string | null
           error: string | null
           fetch_meta: Json | null
           first_name: string
+          gclid: string | null
           id: string
+          industry: string | null
           ip_hash: string | null
+          landing_page: string | null
           language: string
           last_name: string
+          lead_id: string | null
           normalized_domain: string
           overall_score: number | null
+          primary_goal: string | null
+          primary_lead_source: string | null
+          referrer: string | null
+          region: string | null
           report_viewed_at: string | null
           score_version: string | null
           semrush_calls: Json | null
@@ -183,30 +197,50 @@ export type Database = {
           semrush_status: string | null
           signals: Json | null
           status: string
+          systems: string | null
           token: string
           top_actions: Json | null
           updated_at: string
           user_agent: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
           website_url: string
         }
         Insert: {
+          audit_type?: string
           category_scores?: Json | null
+          challenges?: string[]
+          company_name?: string | null
           completed_at?: string | null
+          consent_at?: string | null
           consent_marketing?: boolean
           consent_processing?: boolean
+          consent_version?: string | null
           created_at?: string
           cta_clicked_at?: string | null
           email: string
+          email_provider_id?: string | null
           email_sent_at?: string | null
           error?: string | null
           fetch_meta?: Json | null
           first_name: string
+          gclid?: string | null
           id?: string
+          industry?: string | null
           ip_hash?: string | null
+          landing_page?: string | null
           language?: string
           last_name: string
+          lead_id?: string | null
           normalized_domain: string
           overall_score?: number | null
+          primary_goal?: string | null
+          primary_lead_source?: string | null
+          referrer?: string | null
+          region?: string | null
           report_viewed_at?: string | null
           score_version?: string | null
           semrush_calls?: Json | null
@@ -215,30 +249,50 @@ export type Database = {
           semrush_status?: string | null
           signals?: Json | null
           status?: string
+          systems?: string | null
           token?: string
           top_actions?: Json | null
           updated_at?: string
           user_agent?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
           website_url: string
         }
         Update: {
+          audit_type?: string
           category_scores?: Json | null
+          challenges?: string[]
+          company_name?: string | null
           completed_at?: string | null
+          consent_at?: string | null
           consent_marketing?: boolean
           consent_processing?: boolean
+          consent_version?: string | null
           created_at?: string
           cta_clicked_at?: string | null
           email?: string
+          email_provider_id?: string | null
           email_sent_at?: string | null
           error?: string | null
           fetch_meta?: Json | null
           first_name?: string
+          gclid?: string | null
           id?: string
+          industry?: string | null
           ip_hash?: string | null
+          landing_page?: string | null
           language?: string
           last_name?: string
+          lead_id?: string | null
           normalized_domain?: string
           overall_score?: number | null
+          primary_goal?: string | null
+          primary_lead_source?: string | null
+          referrer?: string | null
+          region?: string | null
           report_viewed_at?: string | null
           score_version?: string | null
           semrush_calls?: Json | null
@@ -247,13 +301,27 @@ export type Database = {
           semrush_status?: string | null
           signals?: Json | null
           status?: string
+          systems?: string | null
           token?: string
           top_actions?: Json | null
           updated_at?: string
           user_agent?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
           website_url?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "audit_requests_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       callback_requests: {
         Row: {
@@ -426,8 +494,15 @@ export type Database = {
       }
       leads: {
         Row: {
+          audit_type: string | null
           budget_range: string | null
           capacity_range: string | null
+          challenges: string[]
+          company_name: string | null
+          consent_at: string | null
+          consent_marketing: boolean
+          consent_processing: boolean
+          consent_version: string | null
           created_at: string
           duplicate_of: string | null
           email: string
@@ -437,6 +512,8 @@ export type Database = {
           ip_hash: string | null
           is_duplicate: boolean | null
           language: string
+          landing_page: string | null
+          lead_score: number | null
           lead_type: string
           message: string | null
           name: string
@@ -444,11 +521,15 @@ export type Database = {
           phone: string | null
           pre_score_bucket: string | null
           pre_score_total: number | null
+          primary_goal: string | null
+          primary_lead_source: string | null
           preferred_times: string | null
           public_token: string | null
           referrer: string | null
+          region: string | null
           service_area: string
           status: string
+          systems: string | null
           user_agent: string | null
           utm_campaign: string | null
           utm_content: string | null
@@ -456,10 +537,18 @@ export type Database = {
           utm_source: string | null
           utm_term: string | null
           website_url: string | null
+          keyword: string | null
         }
         Insert: {
+          audit_type?: string | null
           budget_range?: string | null
           capacity_range?: string | null
+          challenges?: string[]
+          company_name?: string | null
+          consent_at?: string | null
+          consent_marketing?: boolean
+          consent_processing?: boolean
+          consent_version?: string | null
           created_at?: string
           duplicate_of?: string | null
           email: string
@@ -469,6 +558,8 @@ export type Database = {
           ip_hash?: string | null
           is_duplicate?: boolean | null
           language: string
+          landing_page?: string | null
+          lead_score?: number | null
           lead_type: string
           message?: string | null
           name: string
@@ -476,11 +567,15 @@ export type Database = {
           phone?: string | null
           pre_score_bucket?: string | null
           pre_score_total?: number | null
+          primary_goal?: string | null
+          primary_lead_source?: string | null
           preferred_times?: string | null
           public_token?: string | null
           referrer?: string | null
+          region?: string | null
           service_area: string
           status?: string
+          systems?: string | null
           user_agent?: string | null
           utm_campaign?: string | null
           utm_content?: string | null
@@ -488,10 +583,18 @@ export type Database = {
           utm_source?: string | null
           utm_term?: string | null
           website_url?: string | null
+          keyword?: string | null
         }
         Update: {
+          audit_type?: string | null
           budget_range?: string | null
           capacity_range?: string | null
+          challenges?: string[]
+          company_name?: string | null
+          consent_at?: string | null
+          consent_marketing?: boolean
+          consent_processing?: boolean
+          consent_version?: string | null
           created_at?: string
           duplicate_of?: string | null
           email?: string
@@ -501,6 +604,8 @@ export type Database = {
           ip_hash?: string | null
           is_duplicate?: boolean | null
           language?: string
+          landing_page?: string | null
+          lead_score?: number | null
           lead_type?: string
           message?: string | null
           name?: string
@@ -508,11 +613,15 @@ export type Database = {
           phone?: string | null
           pre_score_bucket?: string | null
           pre_score_total?: number | null
+          primary_goal?: string | null
+          primary_lead_source?: string | null
           preferred_times?: string | null
           public_token?: string | null
           referrer?: string | null
+          region?: string | null
           service_area?: string
           status?: string
+          systems?: string | null
           user_agent?: string | null
           utm_campaign?: string | null
           utm_content?: string | null
@@ -520,6 +629,7 @@ export type Database = {
           utm_source?: string | null
           utm_term?: string | null
           website_url?: string | null
+          keyword?: string | null
         }
         Relationships: [
           {
@@ -629,6 +739,71 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_legacy_analysis_scan: {
+        Args: {
+          p_global_limit: number
+          p_ip_hash: string
+          p_language: string
+          p_lead_id: string
+          p_normalized_domain: string
+          p_per_ip_limit: number
+          p_site_name: string
+        }
+        Returns: {
+          deny_reason: string | null
+          scan_reused: boolean
+          scan_token: string | null
+        }[]
+      }
+      create_audit_with_lead: {
+        Args: {
+          p_audit_type: string | null
+          p_challenges: string[] | null
+          p_company_name: string | null
+          p_consent_at: string | null
+          p_consent_marketing: boolean | null
+          p_consent_version: string | null
+          p_domain_cooldown_days: number
+          p_email: string
+          p_first_name: string
+          p_gclid: string | null
+          p_global_limit: number
+          p_industry: string | null
+          p_ip_hash: string | null
+          p_landing_page: string | null
+          p_language: string
+          p_last_name: string
+          p_normalized_domain: string
+          p_per_ip_limit: number
+          p_primary_goal: string | null
+          p_primary_lead_source: string | null
+          p_referrer: string | null
+          p_region: string | null
+          p_systems: string | null
+          p_user_agent: string | null
+          p_utm_campaign: string | null
+          p_utm_content: string | null
+          p_utm_medium: string | null
+          p_utm_source: string | null
+          p_utm_term: string | null
+          p_website_url: string
+        }
+        Returns: {
+          audit_id: string | null
+          audit_token: string | null
+          lead_id: string | null
+          lead_reused: boolean
+          limit_reason: string | null
+        }[]
+      }
+      reserve_lead_submission: {
+        Args: {
+          p_ip_hash: string
+          p_limit: number
+          p_window_seconds: number
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
