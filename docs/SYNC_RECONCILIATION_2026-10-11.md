@@ -24,6 +24,8 @@ CaseStudiesPage has no merge delta: main already contains its own claim-safe aud
 
 ## Checks and remaining gates
 
+Follow-up review after fresh Asana reconciliation: actual a0b frontend was independently accepted/published by the other lane. Its broker acknowledgement patch is retained here: accepted broker session/logout responses update local storage only if no newer local session/logout has superseded the pending write. Main's expanded schema types remain unchanged. Six isolated session cases pass and are included in CI. This supersedes the earlier statement that the other lane's publication was still in progress.
+
 Fresh npm ci succeeded with the main manifest/lock. Root npm typecheck passed; actual app TypeScript and lint are checked separately. First lint found one prefer-const error in imported generated storage; repaired. Normal production build succeeded and generated static route entrypoints, but the inherited MCP Vite plugin rewrote its generated Edge file on Windows. That incidental local output was restored to the unchanged tracked source and is excluded from the PR.
 
 CI and browser checks must be read from the final exact PR head. Database/RLS application order and runtime compatibility are not established by a frontend build. The August migration changes policy/function grants and requires review against the target database before any application.
