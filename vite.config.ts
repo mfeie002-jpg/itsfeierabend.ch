@@ -5,7 +5,7 @@ import { componentTagger } from "lovable-tagger";
 import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/supabase/vite";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig(({ command, mode }) => ({
   server: {
     host: "::",
     port: 8080,
@@ -13,7 +13,9 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     mode === "development" && componentTagger(),
-    mcpPlugin(),
+    // Development generation must not rewrite the reviewed Edge Function while
+    // building or previewing a release (Windows generated a seven-line stub).
+    command === "serve" && mode === "development" && mcpPlugin(),
   ].filter(Boolean),
   resolve: {
     alias: {
