@@ -18,6 +18,7 @@ historical table-creation migrations merely because their version IDs differ.
 | `LEGACY_PUBLIC_SCANNER_ENABLED` | Edge Functions (temporary) | Set to `true` only while the old frontend still calls `business-scanner`, `scan-status` and `get-analysis-report`; unset or `false` immediately after the new frontend is live |
 | `LOVABLE_API_KEY` | Edge Functions | Semrush gateway auth |
 | `SEMRUSH_API_KEY` | Edge Functions | Semrush connection key (managed by connector) |
+| `IP_HASH_SALT` | Edge Functions | Geheimes zufälliges HMAC-Salt (mindestens 32 Zeichen) für IP-Pseudonyme und Quoten. Vor Backend-Cutover zwingend; unkonfiguriert gibt es keine neuen Audits/Leads. |
 | `TURNSTILE_SECRET_KEY` | Edge Functions | Cloudflare Turnstile server-side verify. **Required for beta** — when unset, submissions fail closed. |
 | `VITE_TURNSTILE_SITE_KEY` | Vite build (`.env`) | Public site key rendered in the audit form widget |
 | `VITE_GA4_MEASUREMENT_ID` | Vite build | GA4 measurement ID. When unset, analytics remains disabled. |
@@ -86,7 +87,8 @@ historical table-creation migrations merely because their version IDs differ.
    `20260725050000_final_launch_lead_security.sql`, then
    `20260725060000_atomic_audit_create.sql`, then
    `20260725070000_legacy_scanner_cutover_claim.sql`, and finally
-   `20260910090000_reconcile_audit_admin_policy.sql`. A fresh environment also
+   `20260910090000_reconcile_audit_admin_policy.sql`, followed by
+   `20260923070000_atomic_lead_rate_limit.sql` after source/DB contract and rollback are approved. A fresh environment also
    needs the earlier history including the imported August migration; test the
    complete order rather than replaying already-applied table creation.
 3. Configure Turnstile, Resend, the approved frontend GA4 ID and all required

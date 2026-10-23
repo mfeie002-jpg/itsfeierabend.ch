@@ -65,6 +65,34 @@ test(`reconciled ${history} history preserves admin-only data access and closes 
   const repair = await readFile(new URL(repairFile, migrationDir), 'utf8');
   await db.exec(repair);
   await t.test('repair is safe to replay', async () => { await db.exec(repair); });
+  await t.test('lead-form quota reservation is atomic and service-role only', async () => {
+    const ipHash = 'a'.repeat(64);
+    const first = await asUser('service_role', '', `
+      SELECT public.reserve_lead_submission('${ipHash}', 2, 600) AS reserved
+    `);
+    const second = await asUser('service_role', '', `
+      SELECT public.reserve_lead_submission('${ipHash}', 2, 600) AS reserved
+    `);
+    const third = await asUser('service_role', '', `
+      SELECT public.reserve_lead_submission('${ipHash}', 2, 600) AS reserved
+    `);
+    assert.equal(first.rows[0].reserved, true);
+    assert.equal(second.rows[0].reserved, true);
+    assert.equal(third.rows[0].reserved, false);
+    await assert.rejects(
+      asUser('anon', '', `SELECT public.reserve_lead_submission('${ipHash}', 2, 600)`),
+      /permission denied for function reserve_lead_submission/,
+    );
+  });
+  await t.test('reproduces the cross-branch regression before applying the repair', async () => {
+    await assert.rejects(
+      asUser('authenticated', admin, 'SELECT id FROM public.audit_requests'),
+      /permission denied for function has_role/,
+    );
+  });
+  const repair = await readFile(new URL(repairFile, migrationDir), 'utf8');
+  await db.exec(repair);
+  await t.test('repair is safe to replay', async () => { await db.exec(repair); });
   await t.test('admin reads leads, legacy reports and new audit requests', async () => {
     for (const table of ['leads', 'analysis_reports', 'audit_requests']) {
       const result = await asUser('authenticated', admin, `SELECT id FROM public.${table}`);

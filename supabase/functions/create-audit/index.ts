@@ -87,6 +87,10 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, serviceKey);
   const ip = clientIp(req);
   const ipHash = await hashIp(ip);
+  if (!ipHash) {
+    console.error("Audit client IP or IP_HASH_SALT unavailable");
+    return json({ error: "Audit vorübergehend nicht verfügbar.", code: "rate_limit_unavailable" }, 503);
+  }
   const userAgent = text(req.headers.get("user-agent"), 500);
 
   const logEvent = (eventType: string, metadata: Record<string, unknown>) =>

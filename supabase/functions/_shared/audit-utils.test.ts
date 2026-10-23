@@ -1,4 +1,6 @@
 import {
+  clientIp,
+  hashIpWithSalt,
   isIpLiteral,
   isPrivateIPv4,
   isPrivateIPv6,
@@ -179,4 +181,40 @@ Deno.test("isPrivateIPv6 covers loopback, unspecified, unique-local, link-local,
   for (const ip of publicIps) {
     assert(!isPrivateIPv6(ip), `${ip} must remain public`);
   }
+});
+
+Deno.test("IP pseudonyms are keyed, deterministic and change with the key", async () => {
+  const ip = "203.0.113.42";
+  const first = await hashIpWithSalt(ip, "a".repeat(32));
+  const repeated = await hashIpWithSalt(ip, "a".repeat(32));
+  const rotated = await hashIpWithSalt(ip, "b".repeat(32));
+  assertEquals(first, repeated);
+  assertEquals(first.length, 64);
+  assert(first !== rotated, "Changing the HMAC salt must change the pseudonym");
+});
+
+Deno.test("clientIp prioritizes gateway-attested IP over an injected forwarded chain", () => {
+  const req = new Request("https://example.invalid", {
+    headers: {
+      "cf-connecting-ip": "203.0.113.10",
+      "x-real-ip": "203.0.113.20",
+      "x-forwarded-for": "198.51.100.99, 10.0.0.1",
+    },
+  });
+  assertEquals(clientIp(req), "203.0.113.10");
+});
+
+Deno.test("clientIp falls back from blank attested headers to x-real then forwarded", () => {
+  const req = new Request("https://example.invalid", {
+    headers: {
+      "cf-connecting-ip": "   ",
+      "x-real-ip": "203.0.113.20",
+      "x-forwarded-for": "198.51.100.99, 10.0.0.1",
+    },
+  });
+  assertEquals(clientIp(req), "203.0.113.20");
+  const fallback = new Request("https://example.invalid", {
+    headers: { "x-forwarded-for": "198.51.100.99, 10.0.0.1" },
+  });
+  assertEquals(clientIp(fallback), "198.51.100.99");
 });
