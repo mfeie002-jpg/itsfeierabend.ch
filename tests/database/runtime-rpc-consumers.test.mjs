@@ -66,6 +66,8 @@ test('business-scanner gates the public compatibility path and claims scans atom
   assert.match(source, /resolveTransitionalAuthMode/);
   assert.match(source, /supabase\.rpc\(\s*["']claim_legacy_analysis_scan["']/);
   assert.match(source, /claim\.scan_reused/);
+  // Private scan tokens must never be written to server diagnostics.
+  assert.doesNotMatch(source, /console\.(?:log|error)\([^\n]*(?:\$\{token\}|scan_token)/);
   assert.match(source, /UUID_PATTERN\.test\(leadId\)/);
 });
 
