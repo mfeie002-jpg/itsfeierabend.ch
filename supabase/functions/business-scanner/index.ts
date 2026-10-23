@@ -456,7 +456,7 @@ Deno.serve(async (req) => {
               }
             )
             if (aiResp.ok) {
-              console.log(`AI interpretation complete for ${token}`)
+              console.log('AI interpretation completed')
             } else {
               console.error(`AI interpret failed: ${aiResp.status}`)
               await aiResp.text() // consume body
