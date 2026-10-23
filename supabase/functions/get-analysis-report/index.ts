@@ -80,7 +80,7 @@ serve(async (req) => {
     }
 
     if (!report) {
-      console.log('Report not found for token:', token);
+      console.log('Analysis report not found');
       return new Response(
         JSON.stringify({ error: 'Report not found' }),
         { status: 404, headers: privateHeaders }

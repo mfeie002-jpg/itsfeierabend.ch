@@ -8,11 +8,14 @@ test('create-audit preserves the current form contract and uses the atomic RPC',
   const source = await read('supabase/functions/create-audit/index.ts');
 
   assert.match(source, /supabase\.rpc\(\s*["']create_audit_with_lead["']/);
-  assert.match(source, /p_industry:\s*text\(body\.industry, 120\) \?\? ["']analysis_request["']/);
-  assert.match(source, /p_audit_type:\s*text\(body\.audit_type, 80\) \?\? ["']business["']/);
-  assert.match(source, /p_consent_version:\s*CURRENT_CONSENT_VERSION/);
-  assert.match(source, /p_domain_cooldown_days:\s*LIMITS\.domainCooldownDays/);
-  assert.match(source, /domain_recently_audited/);
+  // Current business-context form resolves validated fields before the RPC.
+  assert.match(source, /resolveAuditContext\(body\)/);
+  assert.match(source, /p_industry:\s*industry/);
+  assert.match(source, /p_audit_type:\s*auditType/);
+  assert.match(source, /p_consent_version:\s*consentVersion/);
+  assert.match(source, /p_per_ip_limit:\s*LIMITS\.perIpDaily/);
+  assert.match(source, /p_global_limit:\s*LIMITS\.globalDaily/);
+  assert.match(source, /creation\?\.limit_reason/);
   assert.doesNotMatch(source, /\.from\(["']audit_requests["']\)\s*\.insert\(/);
   assert.doesNotMatch(source, /recordLimitHits\(/);
 
@@ -42,7 +45,7 @@ test('public analysis report uses a minimal projection and never logs bearer tok
   assert.doesNotMatch(source, /\.select\(["']\*["']\)/);
   assert.doesNotMatch(source, /console\.(?:log|error)\([^\n]*token/);
   assert.doesNotMatch(source, /['"](?:lead_id|raw_evidence)['"]/);
-  assert.match(source, /['"]Cache-Control['"]:\s*['"]no-store['"]/);
+  assert.match(source, /['"]Cache-Control['"]:\s*['"]private, no-store['"]/);
 });
 
 test('IP pseudonyms use the configured secret and fail closed without it', async () => {
@@ -53,7 +56,7 @@ test('IP pseudonyms use the configured secret and fail closed without it', async
   assert.match(source, /crypto\.subtle\.importKey\(/);
   assert.match(source, /crypto\.subtle\.sign\(/);
   assert.doesNotMatch(source, /itsfeierabend-audit-v0/);
-  assert.match(createAudit, /ip_hash_unavailable/);
+  assert.match(createAudit, /rate_limit_unavailable/);
 });
 
 test('business-scanner gates the public compatibility path and claims scans atomically', async () => {

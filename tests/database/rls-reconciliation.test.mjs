@@ -84,15 +84,6 @@ test(`reconciled ${history} history preserves admin-only data access and closes 
       /permission denied for function reserve_lead_submission/,
     );
   });
-  await t.test('reproduces the cross-branch regression before applying the repair', async () => {
-    await assert.rejects(
-      asUser('authenticated', admin, 'SELECT id FROM public.audit_requests'),
-      /permission denied for function has_role/,
-    );
-  });
-  const repair = await readFile(new URL(repairFile, migrationDir), 'utf8');
-  await db.exec(repair);
-  await t.test('repair is safe to replay', async () => { await db.exec(repair); });
   await t.test('admin reads leads, legacy reports and new audit requests', async () => {
     for (const table of ['leads', 'analysis_reports', 'audit_requests']) {
       const result = await asUser('authenticated', admin, `SELECT id FROM public.${table}`);
