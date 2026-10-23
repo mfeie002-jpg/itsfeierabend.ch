@@ -75,3 +75,17 @@ test("unapproved named case is never rendered as a proven result", () => {
   x.case_study.measured_results = [{ metric: "hours", before: 8, after: 2 }];
   assert.doesNotMatch(renderBriefHtml(x), /<td>8/);
 });
+
+
+test("real public-source Happy Souls pilot input renders without invented ROI or case proof", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const { fileURLToPath } = await import("node:url");
+  const fixture = JSON.parse(await readFile(new URL("../docs/examples/HAPPY_SOULS_PUBLIC_OPPORTUNITY_INPUT_2026-10-23.json", import.meta.url), "utf8"));
+  const rendered = renderBriefHtml(fixture);
+  assert.match(rendered, /Happy Souls GmbH/);
+  assert.match(rendered, /happysouls.ch/);
+  assert.match(rendered, /ENTWURF/);
+  assert.match(rendered, /keine Stundenersparnis, CHF-Potenziale/);
+  assert.match(rendered, /Catering-Anfragen zuverlässig erfassen/);
+  assert.doesNotMatch(rendered, /<td>8 Stunden/);
+});

@@ -20,6 +20,12 @@
 | Geeignete Event-Zielgruppe: vor allem Firmen; Privatveranstaltungen ab etwa 50 Personen | frühere Angebotsplanung | Mindestgästezahl, Kapazität, Mindestumsatz und Liefergebiet bestätigen |
 | Prozesszeiten, Conversion, Food Waste, Stundenersparnis | UNKNOWN | Originaldaten/Beobachtung; keine erfundenen Zahlen |
 
+## Aktualisierte öffentliche Evidenz vom 23. Oktober 2026 (Live-Scrape, kein interner KPI)
+
+- [Happy Souls Homepage](https://happysouls.ch/) HTTP 200: Foodtruck-/Buffet-/Foodboxen-Angebote, Foodtruck typischerweise ab 50 Gästen; Full Lunch Foodbox ab 10 Personen. Das öffentliche Formular öffnet ausdrücklich eine vorbereitete E-Mail im Mailprogramm, die der Interessent selbst senden muss. **Das sagt nichts darüber aus, ob interne CRM-Funktionen oder Leads tatsächlich fehlen.**
+- [The Forge canonical Website](https://theforgezurich.ch/) HTTP 200: Web-Menü/WhatsApp-Katalog, persönliches Bestell-OK, öffentlich genannte Lunchzeiten Mo–Do 11:30–14:00, Bestellschluss 13:30. Das unterscheidet sich von älteren internen Planungszeiten und muss vor Automation als aktuell verantwortete Regel bestätigt werden.
+- Ein schriftliches [öffentliches Beispiel für den Opportunity-Brief-Engine-Input](../examples/HAPPY_SOULS_PUBLIC_OPPORTUNITY_INPUT_2026-10-23.json) dokumentiert nur verifizierte Frontend-Beobachtungen und abgeleitete Chancen. Alle realen Anfragen, Zeit- und ROI-Werte bleiben **UNKNOWN**. Keine Case-Freigabe oder Aussenkommunikation.
+
 ## 3. End-to-End Workflow-Library
 
 | ID | Prozess / Trigger → Output | Typische Inputs (zu prüfen) | Automationsmodus | Fach-/Human Gate |
