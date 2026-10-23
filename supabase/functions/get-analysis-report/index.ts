@@ -54,7 +54,7 @@ serve(async (req) => {
     const { token } = await req.json();
     
     if (!token) {
-      console.error('No token provided');
+      console.error('Missing report credential');
       return new Response(
         JSON.stringify({ error: 'Token is required' }),
         { status: 400, headers: privateHeaders }
