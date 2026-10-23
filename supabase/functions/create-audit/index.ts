@@ -134,7 +134,8 @@ serve(async (req) => {
       gclid: text(body?.gclid, 300),
     };
 
-    const botVerdict = await verifyTurnstile(body?.turnstile_token, ip);
+    const turnstileToken = typeof body.turnstile_token === "string" ? body.turnstile_token : null;
+    const botVerdict = await verifyTurnstile(turnstileToken, ip);
     if (!botVerdict.ok) {
       await logEvent("bot_check_failed", { reason: botVerdict.reason });
       return json({ error: "Bot-Check fehlgeschlagen.", code: "bot_check_failed" }, 400);
