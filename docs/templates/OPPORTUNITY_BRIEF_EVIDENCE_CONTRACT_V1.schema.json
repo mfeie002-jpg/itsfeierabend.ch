@@ -1,0 +1,483 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ITSFeierabend AI Opportunity Brief Evidence Contract v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "report_id",
+    "report_type",
+    "subject",
+    "created_at",
+    "sources",
+    "findings",
+    "opportunities",
+    "case_study",
+    "scenario_inputs",
+    "review"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "report_id": {
+      "type": "string",
+      "minLength": 5
+    },
+    "report_type": {
+      "const": "external_opportunity_brief"
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "domain",
+        "vertical",
+        "source_scope"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 2
+        },
+        "domain": {
+          "type": "string",
+          "minLength": 4
+        },
+        "vertical": {
+          "type": "string"
+        },
+        "subvertical": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "region": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_scope": {
+          "const": "public_and_explicitly_authorized"
+        }
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "kind",
+          "location",
+          "accessed_at",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "public_page",
+              "public_record",
+              "published_review",
+              "customer_authorized",
+              "first_party_pilot_evidence"
+            ]
+          },
+          "location": {
+            "type": "string"
+          },
+          "accessed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "enum": [
+              "AVAILABLE",
+              "UNAVAILABLE",
+              "CONFLICT"
+            ]
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
+    },
+    "opportunities": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "title",
+          "rank",
+          "current_state",
+          "future_state",
+          "evidence_refs",
+          "evidence_status",
+          "unknowns",
+          "human_gates",
+          "estimated_effort",
+          "risk",
+          "business_value"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "rank": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "current_state": {
+            "type": "string"
+          },
+          "future_state": {
+            "type": "string"
+          },
+          "evidence_refs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "evidence_status": {
+            "$ref": "#/$defs/evidence_status"
+          },
+          "unknowns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "human_gates": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "estimated_effort": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "risk": {
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH",
+              "UNKNOWN"
+            ]
+          },
+          "business_value": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "case_study": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "reference",
+        "source_ids",
+        "publication_permission"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "PROVEN",
+            "IMPLEMENTED",
+            "PLANNED",
+            "UNAVAILABLE"
+          ]
+        },
+        "reference": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "publication_permission": {
+          "type": "boolean"
+        },
+        "measured_results": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/measurement"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "PROVEN"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "source_ids": {
+                "minItems": 1
+              },
+              "publication_permission": {
+                "const": true
+              },
+              "measured_results": {
+                "type": "array",
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "scenario_inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hours_per_month",
+        "hourly_full_cost_chf",
+        "usable_capacity_fraction",
+        "monthly_incremental_margin_chf",
+        "monthly_run_cost_chf",
+        "implementation_cost_chf",
+        "assumption_notes"
+      ],
+      "properties": {
+        "hours_per_month": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "hourly_full_cost_chf": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "usable_capacity_fraction": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "monthly_incremental_margin_chf": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "monthly_run_cost_chf": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "implementation_cost_chf": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "assumption_notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reviewed",
+        "reviewer",
+        "reviewed_at",
+        "claims_approved"
+      ],
+      "properties": {
+        "reviewed": {
+          "type": "boolean"
+        },
+        "reviewer": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reviewed_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "claims_approved": {
+          "type": "boolean"
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
+  },
+  "$defs": {
+    "evidence_status": {
+      "enum": [
+        "VERIFIED",
+        "INFERRED",
+        "TO_VALIDATE",
+        "UNAVAILABLE",
+        "CONFLICT"
+      ]
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "claim",
+        "evidence_status",
+        "source_ids",
+        "observed_at",
+        "limitations"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "claim": {
+          "type": "string"
+        },
+        "evidence_status": {
+          "$ref": "#/$defs/evidence_status"
+        },
+        "source_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "observed_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "limitations": {
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "evidence_status": {
+                "const": "VERIFIED"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "source_ids": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "metric",
+        "before",
+        "after",
+        "unit",
+        "window",
+        "sample_size",
+        "source_ids"
+      ],
+      "properties": {
+        "metric": {
+          "type": "string"
+        },
+        "before": {
+          "type": "number"
+        },
+        "after": {
+          "type": "number"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "window": {
+          "type": "string"
+        },
+        "sample_size": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "source_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        }
+      }
+    }
+  }
+}
