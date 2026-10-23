@@ -25,6 +25,8 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Offline Opportunity Brief evidence and HTML tests
+        run: node --test tests/opportunity-brief.test.mjs
       - name: Lint
         run: npm run lint
       - name: Typecheck
