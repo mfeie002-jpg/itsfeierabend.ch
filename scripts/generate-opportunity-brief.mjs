@@ -261,7 +261,7 @@ export function renderBriefHtml(input) {
     'table{border-collapse:collapse;width:100%;table-layout:fixed;margin:5mm 0}td,th{padding:2.5mm 2mm;border-bottom:1px solid #cdd5e7;text-align:left;vertical-align:top;overflow-wrap:anywhere;font-size:9.5pt}' +
     'th{background:#ebeff9;color:#243b65}.card{padding:3mm 0;border-bottom:1px solid #dce3f1}.label{font-size:9pt;font-weight:bold;color:#465e90;margin-bottom:1mm}' +
     '.note{padding:4mm;border-left:3px solid #365bd2;background:#f2f5fc;font-size:9.5pt}.muted,.foot{color:#60708f;font-size:9pt}' +
-    '.project{break-inside:avoid;margin-bottom:8mm}a{color:#2454bf;overflow-wrap:anywhere}li{margin-bottom:2mm}';
+    '.project{break-inside:avoid;margin-bottom:3mm}.project h3{font-size:11pt;margin:2mm 0 1mm}.project .card{padding:1mm 0;font-size:9pt;line-height:1.2}.project .label{font-size:8pt;margin-bottom:0}.project ul{margin:1mm 0 1mm;padding-left:6mm}.project li{margin-bottom:0;font-size:9pt;line-height:1.25}.project strong{font-size:9pt}a{color:#2454bf;overflow-wrap:anywhere}li{margin-bottom:2mm}';
   return '<!DOCTYPE html><html lang="de-CH"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">' +
     '<title>ITSFeierabend · ' + html(d.subject.name) + '</title><style>' + styles + '</style></head><body>' +
     (draft ? '<p class="note">ENTWURF · NICHT FÜR EXTERNE WEITERGABE FREIGEGEBEN</p>' : '') +
