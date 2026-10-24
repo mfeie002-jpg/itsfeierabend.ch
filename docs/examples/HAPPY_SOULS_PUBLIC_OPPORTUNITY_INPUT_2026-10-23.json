@@ -1,0 +1,207 @@
+{
+  "schema_version": "1.0.0",
+  "report_id": "ITS-DEMO-HS-20261023",
+  "report_type": "external_opportunity_brief",
+  "subject": {
+    "name": "Happy Souls GmbH",
+    "domain": "happysouls.ch",
+    "vertical": "Gastronomie",
+    "subvertical": "Catering, Foodtruck und Foodboxen",
+    "region": "Zürich, Schweiz",
+    "source_scope": "public_and_explicitly_authorized"
+  },
+  "created_at": "2026-10-23T22:04:25.720Z",
+  "sources": [
+    {
+      "id": "HS-HOME-20261023",
+      "kind": "public_page",
+      "location": "https://happysouls.ch/",
+      "accessed_at": "2026-10-23T22:04:25.720Z",
+      "status": "AVAILABLE",
+      "notes": "Fresh Firecrawl fetch HTTP 200; offers/form statements only; no private system access."
+    },
+    {
+      "id": "FORGE-HOME-20261023",
+      "kind": "public_page",
+      "location": "https://theforgezurich.ch/",
+      "accessed_at": "2026-10-23T22:04:25.720Z",
+      "status": "AVAILABLE",
+      "notes": "Public THE FORGE take-away page, canonical origin, live fetch HTTP 200; no orders placed."
+    }
+  ],
+  "findings": [
+    {
+      "id": "HS-F1",
+      "claim": "Die Catering-Anfrage wird laut Website als E-Mail im lokalen E-Mail-Programm vorbereitet und muss dort vom Interessenten selbst gesendet werden.",
+      "evidence_status": "VERIFIED",
+      "source_ids": [
+        "HS-HOME-20261023"
+      ],
+      "observed_at": "2026-10-23T22:04:25.720Z",
+      "limitations": "Diese Website-Beobachtung beweist weder fehlendes internes CRM noch tatsächlich verlorene Leads."
+    },
+    {
+      "id": "HS-F2",
+      "claim": "Öffentlich angeboten werden Foodtruck-Catering, Foodboxen und Buffets; vier Foodtruck-Konzepte werden genannt.",
+      "evidence_status": "VERIFIED",
+      "source_ids": [
+        "HS-HOME-20261023"
+      ],
+      "observed_at": "2026-10-23T22:04:25.720Z",
+      "limitations": "Aktuelle Rezept-, Kapazitäts-, Personal- und Einkaufsvorgaben intern nicht verifiziert."
+    },
+    {
+      "id": "HS-F3",
+      "claim": "Die Website beschreibt Foodtruck-Anlässe typischerweise ab rund 50 Gästen und ein Full-Lunch-Foodbox-Angebot ab 10 Personen.",
+      "evidence_status": "VERIFIED",
+      "source_ids": [
+        "HS-HOME-20261023"
+      ],
+      "observed_at": "2026-10-23T22:04:25.720Z",
+      "limitations": "Aktuelle verbindliche Angebotsbedingungen, Verfügbarkeiten und Rabattregeln intern zu prüfen."
+    },
+    {
+      "id": "FORGE-F1",
+      "claim": "The Forge bietet Produktwahl auf der Website und über WhatsApp; die Bestellung gilt erst nach persönlicher Bestätigung.",
+      "evidence_status": "VERIFIED",
+      "source_ids": [
+        "FORGE-HOME-20261023"
+      ],
+      "observed_at": "2026-10-23T22:04:25.720Z",
+      "limitations": "Die interne Dokumentation, Abholzeitkoordination und Datenhaltung ist von aussen nicht prüfbar."
+    },
+    {
+      "id": "HS-F4",
+      "claim": "Anfragevolumen, durchschnittliche Offertendauer und tatsächliche Follow-up-Prozesse sind nicht aus öffentlichen Quellen messbar.",
+      "evidence_status": "TO_VALIDATE",
+      "source_ids": [
+        "HS-HOME-20261023"
+      ],
+      "observed_at": "2026-10-23T22:04:25.720Z",
+      "limitations": "Erfordert Kundengespräch und freigegebene Stichprobe."
+    }
+  ],
+  "opportunities": [
+    {
+      "id": "G01",
+      "rank": 1,
+      "title": "Catering-Anfragen zuverlässig erfassen und zuweisen",
+      "current_state": "Öffentlich sichtbarer Anfrageweg über vorbereitetes E-Mail; interne CRM-Ablage unbekannt.",
+      "future_state": "Nach Einwilligung Anfragefelder in einer verantworteten Lead-Ablage sammeln, fehlende Angaben markieren und menschliche Kontaktfreigabe bereitstellen.",
+      "evidence_refs": [
+        "HS-HOME-20261023"
+      ],
+      "evidence_status": "INFERRED",
+      "unknowns": [
+        "Aktueller Eingangskanal und Weiterleitung",
+        "Vorhandene CRM-/Postfach-Funktionen",
+        "Anfragevolumen und Servicezeiten",
+        "Zuständigkeit, DSG-Berechtigungen und Fallarten"
+      ],
+      "human_gates": [
+        "Kontakt-/Datennutzungsfreigabe",
+        "Externe Antworten nur nach freigegebenen Regeln"
+      ],
+      "estimated_effort": null,
+      "risk": "MEDIUM",
+      "business_value": "Möglicherweise weniger manuelle Übergaben und nachvollziehbares Follow-up; ungemessen."
+    },
+    {
+      "id": "G04",
+      "rank": 2,
+      "title": "Offertenvorbereitung für Catering vereinheitlichen",
+      "current_state": "Foodtruck, Buffet und Foodboxen mit unterschiedlichen Mindestmengen/Leistungsbestandteilen werden öffentlich angeboten.",
+      "future_state": "Erfasste Veranstaltungsdaten mit geprüften Menüs und Preisregeln zu einem Offertenentwurf kombinieren; verantwortlicher Chef bestätigt.",
+      "evidence_refs": [
+        "HS-HOME-20261023"
+      ],
+      "evidence_status": "INFERRED",
+      "unknowns": [
+        "Interne Kalkulation und Deckungsbeiträge",
+        "Allergene und Rezeptversionen",
+        "Liefer-/Anfahrtpauschalen und Sonderfälle",
+        "Aktuelle Offertenvorlagen"
+      ],
+      "human_gates": [
+        "Verbindliche Preise und Offerten",
+        "Allergen-/Ernährungsangaben fachlich prüfen"
+      ],
+      "estimated_effort": null,
+      "risk": "MEDIUM",
+      "business_value": "Potenziell geringerer Entwurfsaufwand; nur nach Messung bezifferbar."
+    },
+    {
+      "id": "G08",
+      "rank": 3,
+      "title": "Einkaufs- und Produktionsplanung nach bestätigtem Event",
+      "current_state": "Website beschreibt verschiedene Menükonzepte und persönliche Eventplanung; interner Einkaufsablauf nicht sichtbar.",
+      "future_state": "Freigegebenes Angebot und geprüfte Rezepte in Einkaufsliste sowie Produktions-/Teamplan überführen; Abweichungen offenlegen.",
+      "evidence_refs": [
+        "HS-HOME-20261023"
+      ],
+      "evidence_status": "TO_VALIDATE",
+      "unknowns": [
+        "Rezeptkarten und Portionsmengen",
+        "Lagerlisten und Lieferanten",
+        "Küchenkapazität / Personalplanung",
+        "Fehler- und Verderbquoten"
+      ],
+      "human_gates": [
+        "Einkäufe und Zahlungen",
+        "Lebensmittelsicherheit, Allergene, Personaleinsatz"
+      ],
+      "estimated_effort": null,
+      "risk": "HIGH",
+      "business_value": "Potenzielle Entlastung in Planung und Einkauf; kein belegter Nutzen."
+    },
+    {
+      "id": "G17",
+      "rank": 4,
+      "title": "Take-away-Bestellungen als separate Gastro-Variante strukturieren",
+      "current_state": "The Forge nutzt Web-Warenkorb und WhatsApp mit persönlicher Auftragsbestätigung.",
+      "future_state": "Nach klar definiertem Scope nur eingegangene bestätigte WhatsApp-Bestellungen konsistent nachführen; keine automatische Bestellannahme.",
+      "evidence_refs": [
+        "FORGE-HOME-20261023"
+      ],
+      "evidence_status": "INFERRED",
+      "unknowns": [
+        "WhatsApp-Export/API-Verfügbarkeit",
+        "Einwilligung, Bestell-ID und Duplikate",
+        "Abholkapazität, Zahlarten und Öffnungszeiten"
+      ],
+      "human_gates": [
+        "Bestellbestätigung",
+        "Kapazitätskontrolle und verbindliche Preise"
+      ],
+      "estimated_effort": null,
+      "risk": "MEDIUM",
+      "business_value": "Potenziell übersichtlichere Bestellkoordination; noch nicht gemessen."
+    }
+  ],
+  "case_study": {
+    "state": "PLANNED",
+    "reference": "The Forge / Happy Souls",
+    "source_ids": [
+      "HS-HOME-20261023",
+      "FORGE-HOME-20261023"
+    ],
+    "publication_permission": false,
+    "measured_results": null
+  },
+  "scenario_inputs": {
+    "hours_per_month": null,
+    "hourly_full_cost_chf": null,
+    "usable_capacity_fraction": null,
+    "monthly_incremental_margin_chf": null,
+    "monthly_run_cost_chf": null,
+    "implementation_cost_chf": null,
+    "assumption_notes": []
+  },
+  "review": {
+    "reviewed": false,
+    "reviewer": null,
+    "reviewed_at": null,
+    "claims_approved": false,
+    "notes": "Public-source example only; no measured pilot outcomes. Must not be sent externally."
+  }
+}
