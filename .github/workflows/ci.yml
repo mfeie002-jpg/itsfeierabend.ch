@@ -25,6 +25,17 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Offline Opportunity Brief evidence and HTML tests
+        run: node --test tests/opportunity-brief.test.mjs
+      - name: Generate source-backed watermarked example HTML
+        run: node scripts/generate-opportunity-brief.mjs docs/examples/HAPPY_SOULS_PUBLIC_OPPORTUNITY_INPUT_2026-10-23.json "$RUNNER_TEMP/happy-souls-opportunity-brief-draft.html"
+      - name: Upload evidence-gated example preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: happy-souls-opportunity-brief-draft
+          path: ${{ runner.temp }}/happy-souls-opportunity-brief-draft.html
+          if-no-files-found: error
+          retention-days: 7
       - name: Lint
         run: npm run lint
       - name: Typecheck
