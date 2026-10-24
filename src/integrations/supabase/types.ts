@@ -739,6 +739,70 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_audit_with_lead: {
+        Args: {
+          p_website_url: string
+          p_normalized_domain: string
+          p_first_name: string
+          p_last_name: string
+          p_email: string
+          p_language: string
+          p_company_name: string | null
+          p_industry: string | null
+          p_region: string | null
+          p_primary_goal: string | null
+          p_primary_lead_source: string | null
+          p_challenges: string[]
+          p_systems: string | null
+          p_audit_type: string
+          p_landing_page: string | null
+          p_referrer: string | null
+          p_utm_source: string | null
+          p_utm_medium: string | null
+          p_utm_campaign: string | null
+          p_utm_term: string | null
+          p_utm_content: string | null
+          p_gclid: string | null
+          p_consent_marketing: boolean
+          p_consent_at: string
+          p_consent_version: string
+          p_ip_hash: string
+          p_user_agent: string | null
+          p_per_ip_limit: number
+          p_global_limit: number
+        }
+        Returns: {
+          audit_id: string | null
+          audit_token: string | null
+          lead_id: string | null
+          lead_reused: boolean
+          limit_reason: string | null
+        }[]
+      }
+      claim_legacy_analysis_scan: {
+        Args: {
+          p_lead_id: string
+          p_normalized_domain: string
+          p_site_name: string
+          p_language: string
+          p_ip_hash: string
+          p_per_ip_limit: number
+          p_global_limit: number
+        }
+        Returns: {
+          scan_token: string | null
+          scan_reused: boolean
+          deny_reason: string | null
+        }[]
+      }
+      reserve_lead_submission: {
+        Args: {
+          p_ip_hash: string
+          p_limit: number
+          p_window_seconds: number
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

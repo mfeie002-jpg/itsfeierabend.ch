@@ -87,6 +87,10 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, serviceKey);
   const ip = clientIp(req);
   const ipHash = await hashIp(ip);
+  if (!ipHash) {
+    console.error("Audit client IP or IP_HASH_SALT unavailable");
+    return json({ error: "Audit vorübergehend nicht verfügbar.", code: "rate_limit_unavailable" }, 503);
+  }
   const userAgent = text(req.headers.get("user-agent"), 500);
 
   const logEvent = (eventType: string, metadata: Record<string, unknown>) =>
@@ -130,7 +134,8 @@ serve(async (req) => {
       gclid: text(body?.gclid, 300),
     };
 
-    const botVerdict = await verifyTurnstile(body?.turnstile_token, ip);
+    const turnstileToken = typeof body.turnstile_token === "string" ? body.turnstile_token : null;
+    const botVerdict = await verifyTurnstile(turnstileToken, ip);
     if (!botVerdict.ok) {
       await logEvent("bot_check_failed", { reason: botVerdict.reason });
       return json({ error: "Bot-Check fehlgeschlagen.", code: "bot_check_failed" }, 400);
