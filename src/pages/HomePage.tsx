@@ -29,16 +29,16 @@ const auditAreas = {
 
 const businessQuestions = {
   de: [
-    'Warum entstehen aus bestehendem Traffic zu wenige qualifizierte Anfragen?',
-    'Welche SEO- oder AI-Visibility-Lücke hat tatsächlich Geschäftswert?',
-    'Wo gehen Leads zwischen Formular, CRM und Follow-up verloren?',
-    'Welcher Hebel sollte zuerst umgesetzt werden – und welcher kann warten?',
+    'Welche wiederkehrenden Abläufe kosten Ihr Team jede Woche Zeit?',
+    'Welche Entscheidungen kann KI vorbereiten, ohne dass Sie Kontrolle verlieren?',
+    'Wo gehen Informationen, Anfragen und Aufgaben zwischen Systemen verloren?',
+    'Welche Automation lohnt sich zuerst – und was bleibt besser beim Menschen?',
   ],
   en: [
-    'Why does existing traffic produce too few qualified enquiries?',
-    'Which SEO or AI visibility gap has real commercial value?',
-    'Where are leads lost between form, CRM and follow-up?',
-    'Which action should be implemented first—and which can wait?',
+    'Which recurring tasks take up your team’s time each week?',
+    'Which decisions can AI prepare while you retain control?',
+    'Where do information, enquiries and tasks get lost between systems?',
+    'Which automation should come first—and which decisions should stay human?',
   ],
 };
 
@@ -59,18 +59,18 @@ const method = {
 
 const offerLadder = {
   de: [
-    ['01', 'Kostenloser Quick Audit', 'Vorläufiger Befund, Reifegrad und drei bis fünf priorisierte Massnahmen.'],
-    ['02', 'Vertiefter Audit', 'Website, SEO, AI Visibility oder digitale Geschäftslage mit freigegebenen Datenzugängen.'],
-    ['03', 'Growth Sprint', 'Klar abgegrenzte Umsetzung der wichtigsten Hebel mit Abnahmekriterien.'],
-    ['04', 'Laufende Optimierung', 'SEO, AI Visibility, Conversion, Analytics und Reporting nach vereinbartem Umfang.'],
-    ['05', 'Partner-Modell', 'Referral und Co-Delivery; White Label erst nach erfolgreichem Pilot.'],
+    ['01', 'Kostenloser Website-Quick-Check', 'Öffentlich erkennbare Website-Signale als vorläufiger Einstieg. Kein Ersatz für eine interne Prozessanalyse.'],
+    ['02', 'AI Operations Audit', 'Wir erfassen reale Arbeitsabläufe, Systeme, Zeitaufwand, Daten und Freigaben. Daraus entsteht ein persönlicher Umsetzungsplan.'],
+    ['03', 'Automation Sprint', 'Wir setzen einen klar abgegrenzten Prozess um, testen Sonderfälle und messen die Wirkung. Verbindliche Entscheidungen bleiben freigegeben.'],
+    ['04', 'AI Operating System', 'Mehrere geprüfte Abläufe, Integrationen und Mitarbeitende arbeiten in einem kontrollierten System zusammen.'],
+    ['05', 'Ihr laufender KI-Partner', 'Persönliche Betreuung, Schulung, Monitoring und schrittweise Verbesserung statt Softwareübergabe ohne Verantwortung.'],
   ],
   en: [
-    ['01', 'Free Quick Audit', 'Preliminary findings, maturity level and three to five prioritized actions.'],
-    ['02', 'Deep Audit', 'Website, SEO, AI visibility or digital business analysis with approved data access.'],
-    ['03', 'Growth Sprint', 'Tightly scoped implementation of the most important actions with acceptance criteria.'],
-    ['04', 'Ongoing optimization', 'SEO, AI visibility, conversion, analytics and reporting within an agreed scope.'],
-    ['05', 'Partner model', 'Referral and co-delivery; white label only after a successful pilot.'],
+    ['01', 'Free website Quick Check', 'Preliminary publicly observable website signals. This is not an audit of your internal operations.'],
+    ['02', 'AI Operations Audit', 'We map real processes, tools, time, data and approvals to build a tailored implementation blueprint.'],
+    ['03', 'Automation Sprint', 'We implement one scoped workflow, test exceptions and measure the effect, with explicit human approvals.'],
+    ['04', 'AI Operating System', 'Connect several validated workflows, people and integrations into one controlled operating system.'],
+    ['05', 'Ongoing personal AI partner', 'Personal implementation, training, monitoring and continuous improvement rather than handing over a tool and disappearing.'],
   ],
 };
 
@@ -78,7 +78,7 @@ const faqs = {
   de: [
     {
       question: 'Was ist itsFeierabend.ch?',
-      answer: 'itsFeierabend.ch ist eine eigenständige Schweizer Plattform für AI Business Audits und digitale Wachstumsdiagnose. Sie analysiert Sichtbarkeit, Website, Conversion, Tracking, CRM und Automatisierung – nicht Räumung, Reinigung oder Umzug.',
+      answer: 'itsFeierabend.ch ist Ihr persönlicher Schweizer KI-Transformationspartner für KMU. Wir nehmen echte Arbeitsabläufe auf, bauen sichere, überprüfbare Automationen, schulen Ihr Team und verbessern das System laufend. Der kostenlose Website-Quick-Check zeigt nur öffentlich sichtbare Signale und ersetzt keine interne Betriebsanalyse.',
     },
     {
       question: 'Ist der kostenlose Audit eine Fake-AI-Demo?',
@@ -86,7 +86,7 @@ const faqs = {
     },
     {
       question: 'Wer ist die primäre Zielgruppe?',
-      answer: 'Etablierte, inhabergeführte Schweizer Dienstleistungs- und B2B-KMU mit wertvollen Leads, aber schwacher Messung, lokaler Sichtbarkeit oder Nachbearbeitung. Agenturen und IT-Dienstleister sind ein sekundärer Partnerkanal.',
+      answer: 'Inhabergeführte Schweizer KMU mit wiederkehrender Administration, manuellen Übergaben und begrenzter Zeit für Tool-Experimente. Besonders geeignet sind Betriebe mit einem klaren Prozessverantwortlichen und messbarem Arbeitsvolumen.',
     },
     {
       question: 'Gibt es feste Preise?',
@@ -100,7 +100,7 @@ const faqs = {
   en: [
     {
       question: 'What is itsFeierabend.ch?',
-      answer: 'itsFeierabend.ch is an independent Swiss platform for AI business audits and digital growth diagnostics. It analyses visibility, websites, conversion, tracking, CRM and automation—not clearance, cleaning or moving services.',
+      answer: 'itsFeierabend.ch is a personal AI transformation and implementation partner for Swiss SMEs. We map real workflows, build controlled automations, train your team and continually improve the system. The free website Quick Check only covers public signals, not your internal operations.',
     },
     {
       question: 'Is the free audit a fake AI demo?',
@@ -108,7 +108,7 @@ const faqs = {
     },
     {
       question: 'Who is the primary audience?',
-      answer: 'Established, owner-led Swiss service and B2B SMEs with valuable leads but weak measurement, local visibility or follow-up. Agencies and IT providers are a secondary partner channel.',
+      answer: 'Owner-led Swiss SMEs with recurring administration, manual handoffs and little time for tool experiments. A clear process owner and measurable work volume are ideal starting conditions.',
     },
     {
       question: 'Are there fixed prices?',
@@ -134,16 +134,16 @@ export default function HomePage() {
   return (
     <Layout>
       <SEOHead
-        title={isEnglish ? 'AI Business Audit for Swiss SMEs' : 'AI Business Audit für Schweizer KMU'}
+        title={isEnglish ? 'Personal AI transformation partner for Swiss SMEs' : 'Persönlicher KI-Partner für Schweizer KMU'}
         description={isEnglish
-          ? 'Evidence-based digital business audits for visibility, leads, conversion, tracking, CRM and automation. Start with a free Quick Audit.'
-          : 'Evidenzbasierte digitale Standortbestimmung für Sichtbarkeit, Leads, Conversion, Tracking, CRM und Automatisierung. Start mit kostenlosem Quick Audit.'}
+          ? 'We observe your business workflows, build controlled AI automations and personally support your team from implementation to measurable operations. Start with a free website Quick Check.'
+          : 'Wir erfassen echte Geschäftsabläufe, entwickeln sichere KI-Automationen und begleiten Schweizer KMU persönlich von der Umsetzung bis zur Messung. Einstieg mit kostenlosem Website-Quick-Check.'}
         canonical={isEnglish ? 'https://itsfeierabend.ch/en' : 'https://itsfeierabend.ch/'}
       />
       <OrganizationSchema
         description={isEnglish
-          ? 'Swiss platform for AI business audits and digital growth diagnostics.'
-          : 'Schweizer Plattform für AI Business Audits und digitale Wachstumsdiagnose.'}
+          ? 'Personal Swiss AI transformation and implementation partner for SMEs.'
+          : 'Persönlicher Schweizer KI-Transformations- und Umsetzungspartner für KMU.'}
       />
       <WebsiteSchema />
       <FAQSchema items={faqItems} />
@@ -157,18 +157,18 @@ export default function HomePage() {
                   <div className="inline-flex min-h-8 items-center gap-2 rounded-full border border-border bg-background px-3">
                     <span className="h-2 w-2 rounded-full bg-signal" aria-hidden="true" />
                     <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-                      {isEnglish ? 'Swiss digital business diagnostic' : 'Schweizer digitale Geschäftsdiagnose'}
+                      {isEnglish ? 'Personal AI partner for Swiss SMEs' : 'Persönlicher KI-Partner für Schweizer KMU'}
                     </span>
                   </div>
                   <h1 className="mt-8 max-w-5xl text-balance">
                     {isEnglish
-                      ? 'See where your digital business is losing potential.'
-                      : 'Sehen, wo Ihr digitales Geschäft Potenzial verliert.'}
+                      ? 'Less administration. Better workflows. Your personal AI partner.'
+                      : 'Weniger Administration. Bessere Abläufe. Ihr persönlicher KI-Partner.'}
                   </h1>
                   <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground md:text-xl">
                     {isEnglish
-                      ? 'itsFeierabend.ch analyses visibility, websites, conversion, tracking, CRM and automation—and turns the evidence into a prioritized next step.'
-                      : 'itsFeierabend.ch analysiert Sichtbarkeit, Website, Conversion, Tracking, CRM und Automatisierung – und macht aus den Befunden einen priorisierten nächsten Schritt.'}
+                      ? 'We observe how your business works, build tailored AI-assisted workflows and personally support your team through testing, rollout and ongoing improvement. You retain control of important decisions.'
+                      : 'Wir erfassen Ihre täglichen Arbeitsabläufe, bauen passende KI-Automationen und begleiten Ihr Team persönlich bei Tests, Einführung und Betrieb. Wichtige Entscheidungen bleiben bei Ihnen.'}
                   </p>
                 </div>
 
@@ -220,8 +220,8 @@ export default function HomePage() {
 
           <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
             {(isEnglish
-              ? ['Rule-based scores', 'Visible evidence', 'No purchase obligation', 'Built in Switzerland']
-              : ['Regelbasierte Scores', 'Sichtbare Evidenz', 'Keine Kaufpflicht', 'In der Schweiz gebaut']
+              ? ['Observe real work', 'Human approvals', 'Provenance over promises', 'Personal Swiss partner']
+              : ['Echte Abläufe aufnehmen', 'Menschliche Freigaben', 'Belege statt Versprechen', 'Persönlich in der Schweiz']
             ).map((claim) => (
               <div key={claim} className="flex min-h-20 items-end rounded-md border border-border bg-card p-4">
                 <span className="text-sm font-medium">{claim}</span>
@@ -238,7 +238,7 @@ export default function HomePage() {
               01 · {isEnglish ? 'Business questions' : 'Geschäftsfragen'}
             </p>
             <h2 className="mt-4 text-balance">
-              {isEnglish ? 'More traffic is not always the answer.' : 'Mehr Traffic ist nicht immer die Antwort.'}
+              {isEnglish ? 'AI starts with the way your business actually works.' : 'KI beginnt dort, wo Ihr Betrieb täglich arbeitet.'}
             </h2>
           </div>
           <div className="lg:col-span-8">
@@ -476,8 +476,8 @@ export default function HomePage() {
             <h3 className="mt-4 text-3xl">itsFeierabend Quick Audit</h3>
             <p className="mt-4 max-w-3xl leading-relaxed text-muted-foreground">
               {isEnglish
-                ? 'The live product demonstrates deterministic scoring, explicit evidence states and a private result flow. Client and connected-project cases remain unpublished until facts, baselines and permission are documented.'
-                : 'Das eigene Produkt zeigt deterministisches Scoring, sichtbare Evidenzzustände und einen privaten Resultat-Flow. Kunden- und verbundene Projekte bleiben unveröffentlicht, bis Fakten, Baseline und Freigabe dokumentiert sind.'}
+                ? 'Our audit implementation includes deterministic scoring, transparent evidence states and a private report flow in source code. Live end-to-end acceptance is tracked separately. Client results are only published with verified baselines and permission.'
+                : 'Der Audit-Quellcode umfasst deterministisches Scoring, sichtbare Evidenzzustände und einen privaten Report-Flow. Die produktive End-to-End-Abnahme erfolgt separat. Kundenergebnisse veröffentlichen wir nur mit belegter Baseline und Freigabe.'}
             </p>
           </article>
         </div>
@@ -519,13 +519,13 @@ export default function HomePage() {
                 </p>
                 <h2 className="mt-4 max-w-4xl text-balance">
                   {isEnglish
-                    ? 'Find the strongest digital lever before investing in more activity.'
-                    : 'Den stärksten digitalen Hebel finden, bevor mehr Aktivität bezahlt wird.'}
+                    ? 'Find the right first step, then let us implement it with you.'
+                    : 'Den richtigen ersten Schritt finden. Danach persönlich umsetzen.'}
                 </h2>
                 <p className="mt-5 max-w-2xl leading-relaxed text-muted-foreground">
                   {isEnglish
-                    ? 'The Quick Audit is free. It produces a preliminary, clearly labelled result and a practical next step.'
-                    : 'Der Quick Audit ist kostenlos. Er liefert ein vorläufiges, klar gekennzeichnetes Ergebnis und einen praktischen nächsten Schritt.'}
+                    ? 'The free website Quick Check is an initial public-signal assessment. An internal operations audit and implementation are separately scoped with you.'
+                    : 'Der kostenlose Website-Quick-Check zeigt öffentlich erkennbare Signale. Die interne Prozessanalyse und Umsetzung planen wir anschliessend persönlich mit Ihnen.'}
                 </p>
               </div>
               <div className="flex flex-col gap-3 lg:col-span-4 lg:items-end">
