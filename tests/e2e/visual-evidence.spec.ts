@@ -13,7 +13,7 @@ test.describe("release visual evidence", () => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForHydratedPage(page);
     await expect(page.getByRole("heading", { level: 1 })).toContainText(
-      "Sehen, wo Ihr digitales Geschäft Potenzial verliert.",
+      "Weniger Administration. Bessere Abläufe. Ihr persönlicher KI-Partner.",
     );
     await assertNoHorizontalOverflow(page);
 
